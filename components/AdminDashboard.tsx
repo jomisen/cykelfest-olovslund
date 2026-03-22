@@ -206,6 +206,9 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
                         {r.is_pair && r.partner_email && (
                           <p className="text-xs text-gray-400 mt-0.5">{r.partner_email}</p>
                         )}
+                        {r.is_pair && r.notes?.startsWith('Partner telefon:') && (
+                          <p className="text-xs text-gray-400">{r.notes.split('\n')[0]}</p>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-600 max-w-32">
                         <p className="truncate">{r.address}</p>

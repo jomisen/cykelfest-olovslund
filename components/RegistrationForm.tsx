@@ -11,6 +11,7 @@ interface FormErrors {
   address?: string
   partner_name?: string
   partner_email?: string
+  partner_phone?: string
 }
 
 export default function RegistrationForm() {
@@ -18,9 +19,10 @@ export default function RegistrationForm() {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
-  const [isPair, setIsPair] = useState(false)
+  const [isPair, setIsPair] = useState(true)
   const [partnerName, setPartnerName] = useState('')
   const [partnerEmail, setPartnerEmail] = useState('')
+  const [partnerPhone, setPartnerPhone] = useState('')
   const [notes, setNotes] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -50,7 +52,11 @@ export default function RegistrationForm() {
       case 'partner_email':
         if (isPair && !value.trim()) return 'Partnerns e-postadress är obligatorisk'
         if (isPair && value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-          return 'Ange en giltig e-postadress för partner'
+          return 'Ange en giltig e-postadress'
+        return undefined
+      case 'partner_phone':
+        if (isPair && !value.trim()) return 'Partnerns telefonnummer är obligatoriskt'
+        if (isPair && value.replace(/\s/g, '').length < 5) return 'Ange ett giltigt telefonnummer'
         return undefined
       default:
         return undefined
@@ -62,6 +68,9 @@ export default function RegistrationForm() {
     setErrors(prev => ({ ...prev, [field]: error }))
   }
 
+  const clearError = (field: keyof FormErrors) =>
+    setErrors(prev => ({ ...prev, [field]: undefined }))
+
   const validateAll = (): boolean => {
     const newErrors: FormErrors = {
       name: validateField('name', name),
@@ -70,6 +79,7 @@ export default function RegistrationForm() {
       address: validateField('address', address),
       partner_name: isPair ? validateField('partner_name', partnerName) : undefined,
       partner_email: isPair ? validateField('partner_email', partnerEmail) : undefined,
+      partner_phone: isPair ? validateField('partner_phone', partnerPhone) : undefined,
     }
     const filtered = Object.fromEntries(Object.entries(newErrors).filter(([, v]) => v !== undefined))
     setErrors(filtered)
@@ -78,33 +88,23 @@ export default function RegistrationForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateAll()) {
-      toast.error('Vänligen åtgärda felen i formuläret')
-      return
-    }
-
+    if (!validateAll()) { toast.error('Vänligen åtgärda felen i formuläret'); return }
     setIsSubmitting(true)
     try {
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-          address: address.trim(),
-          is_pair: isPair,
+          name: name.trim(), email: email.trim(), phone: phone.trim(),
+          address: address.trim(), is_pair: isPair,
           partner_name: isPair ? partnerName.trim() : undefined,
           partner_email: isPair ? partnerEmail.trim() : undefined,
+          partner_phone: isPair ? partnerPhone.trim() : undefined,
           notes: notes.trim() || undefined,
         }),
       })
-
       const result = await response.json()
-      if (!response.ok) {
-        throw new Error(result.error || 'Något gick fel')
-      }
-
+      if (!response.ok) throw new Error(result.error || 'Något gick fel')
       setSubmittedName(name.trim())
       setIsSuccess(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -115,197 +115,249 @@ export default function RegistrationForm() {
     }
   }
 
-  if (isSuccess) {
-    return <SuccessState name={submittedName} />
-  }
+  if (isSuccess) return <SuccessState name={submittedName} />
+
+  const inputStyle = (hasError: boolean) => ({
+    width: '100%', padding: '13px 16px',
+    border: `2px solid ${hasError ? '#ef4444' : 'rgba(255,255,255,0.15)'}`,
+    borderRadius: 12, fontSize: 16, outline: 'none',
+    background: hasError ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.07)',
+    color: '#f0ebff',
+    boxSizing: 'border-box' as const,
+    transition: 'border-color 0.2s, background 0.2s',
+    fontFamily: 'inherit',
+  })
+
+  const labelStyle = { display: 'block', fontSize: 14, fontWeight: 600, color: 'rgba(240,235,255,0.8)', marginBottom: 6 }
+  const errorStyle = { color: '#f87171', fontSize: 13, marginTop: 5 }
+  const fieldStyle = { display: 'flex', flexDirection: 'column' as const }
+
+  const personCardStyle = (bg: string, border: string) => ({
+    background: bg,
+    borderRadius: 16, padding: 24,
+    border: `1px solid ${border}`,
+    display: 'flex', flexDirection: 'column' as const, gap: 18,
+  })
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-6">
-      {/* Namn */}
-      <div>
-        <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-1.5">
-          Namn <span className="text-red-500" aria-label="obligatoriskt">*</span>
-        </label>
-        <input
-          type="text"
-          id="name"
-          value={name}
-          onChange={e => { setName(e.target.value); if (errors.name) setErrors(p => ({ ...p, name: undefined })) }}
-          onBlur={e => handleBlur('name', e.target.value)}
-          required
-          aria-required="true"
-          aria-invalid={errors.name ? 'true' : 'false'}
-          aria-describedby={errors.name ? 'name-error' : undefined}
-          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-fest-purple focus:border-transparent transition-colors ${errors.name ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
-          placeholder="För- och efternamn"
-        />
-        {errors.name && <p id="name-error" className="text-red-600 text-sm mt-1.5" role="alert">{errors.name}</p>}
-      </div>
-
-      {/* E-post */}
-      <div>
-        <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1.5">
-          E-postadress <span className="text-red-500" aria-label="obligatoriskt">*</span>
-        </label>
-        <input
-          type="email"
-          id="email"
-          value={email}
-          onChange={e => { setEmail(e.target.value); if (errors.email) setErrors(p => ({ ...p, email: undefined })) }}
-          onBlur={e => handleBlur('email', e.target.value)}
-          required
-          aria-required="true"
-          aria-invalid={errors.email ? 'true' : 'false'}
-          aria-describedby={errors.email ? 'email-error' : undefined}
-          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-fest-purple focus:border-transparent transition-colors ${errors.email ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
-          placeholder="din@email.se"
-        />
-        {errors.email && <p id="email-error" className="text-red-600 text-sm mt-1.5" role="alert">{errors.email}</p>}
-      </div>
-
-      {/* Telefon */}
-      <div>
-        <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-1.5">
-          Telefonnummer <span className="text-red-500" aria-label="obligatoriskt">*</span>
-        </label>
-        <input
-          type="tel"
-          id="phone"
-          value={phone}
-          onChange={e => { setPhone(e.target.value); if (errors.phone) setErrors(p => ({ ...p, phone: undefined })) }}
-          onBlur={e => handleBlur('phone', e.target.value)}
-          required
-          aria-required="true"
-          aria-invalid={errors.phone ? 'true' : 'false'}
-          aria-describedby={errors.phone ? 'phone-error' : undefined}
-          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-fest-purple focus:border-transparent transition-colors ${errors.phone ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
-          placeholder="070-123 45 67"
-        />
-        {errors.phone && <p id="phone-error" className="text-red-600 text-sm mt-1.5" role="alert">{errors.phone}</p>}
-      </div>
-
-      {/* Adress */}
-      <div>
-        <label htmlFor="address" className="block text-sm font-semibold text-gray-700 mb-1.5">
-          Din adress i Olovslund <span className="text-red-500" aria-label="obligatoriskt">*</span>
-        </label>
-        <input
-          type="text"
-          id="address"
-          value={address}
-          onChange={e => { setAddress(e.target.value); if (errors.address) setErrors(p => ({ ...p, address: undefined })) }}
-          onBlur={e => handleBlur('address', e.target.value)}
-          required
-          aria-required="true"
-          aria-invalid={errors.address ? 'true' : 'false'}
-          aria-describedby={errors.address ? 'address-error' : undefined}
-          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-fest-purple focus:border-transparent transition-colors ${errors.address ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
-          placeholder="Gatunamn 12"
-        />
-        {errors.address && <p id="address-error" className="text-red-600 text-sm mt-1.5" role="alert">{errors.address}</p>}
-      </div>
+    <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
       {/* Ensam / Par toggle */}
-      <fieldset>
-        <legend className="block text-sm font-semibold text-gray-700 mb-3">
-          Anmälan <span className="text-red-500" aria-label="obligatoriskt">*</span>
-        </legend>
-        <div className="flex rounded-xl overflow-hidden border-2 border-gray-200">
-          <button
-            type="button"
-            onClick={() => setIsPair(false)}
-            aria-pressed={!isPair}
-            className={`flex-1 py-3 font-semibold text-sm transition-all ${!isPair ? 'bg-fest-purple text-white shadow-inner' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-          >
-            Ensam
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsPair(true)}
-            aria-pressed={isPair}
-            className={`flex-1 py-3 font-semibold text-sm transition-all border-l-2 border-gray-200 ${isPair ? 'bg-fest-purple text-white shadow-inner' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-          >
-            Par
-          </button>
+      <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
+        <legend style={{ ...labelStyle, marginBottom: 10 }}>Anmälan</legend>
+        <div style={{ display: 'flex', borderRadius: 12, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.15)' }}>
+          {[{ val: true, label: 'Par', emoji: '👫' }, { val: false, label: 'Ensam', emoji: '🙋' }].map(opt => (
+            <button
+              key={String(opt.val)} type="button"
+              onClick={() => setIsPair(opt.val)}
+              aria-pressed={isPair === opt.val}
+              style={{
+                flex: 1, padding: '13px 16px',
+                background: isPair === opt.val ? 'linear-gradient(135deg, #7C3AED, #EC4899)' : 'rgba(255,255,255,0.06)',
+                color: isPair === opt.val ? 'white' : 'rgba(240,235,255,0.85)',
+                fontWeight: 600, fontSize: 15, border: 'none',
+                cursor: 'pointer', transition: 'all 0.2s',
+                borderRight: opt.val === true ? '2px solid rgba(255,255,255,0.15)' : 'none',
+                fontFamily: 'inherit',
+              }}
+            >
+              {opt.emoji} {opt.label}
+            </button>
+          ))}
         </div>
       </fieldset>
 
-      {/* Par-fält */}
-      {isPair && (
-        <div className="space-y-4 animate-fade-in-up bg-purple-50 rounded-2xl p-5 border border-purple-100">
-          <p className="text-sm text-fest-purple font-medium">Partnerns uppgifter</p>
-          <div>
-            <label htmlFor="partner_name" className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Partnerns namn <span className="text-red-500" aria-label="obligatoriskt">*</span>
-            </label>
-            <input
-              type="text"
-              id="partner_name"
-              value={partnerName}
-              onChange={e => { setPartnerName(e.target.value); if (errors.partner_name) setErrors(p => ({ ...p, partner_name: undefined })) }}
-              onBlur={e => handleBlur('partner_name', e.target.value)}
-              required={isPair}
-              aria-required={isPair ? 'true' : 'false'}
-              aria-invalid={errors.partner_name ? 'true' : 'false'}
-              aria-describedby={errors.partner_name ? 'partner-name-error' : undefined}
-              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-fest-purple focus:border-transparent transition-colors ${errors.partner_name ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'}`}
-              placeholder="För- och efternamn"
-            />
-            {errors.partner_name && <p id="partner-name-error" className="text-red-600 text-sm mt-1.5" role="alert">{errors.partner_name}</p>}
+      {/* Person-kort */}
+      {isPair ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Person 1 */}
+          <div style={personCardStyle('rgba(124,58,237,0.12)', 'rgba(124,58,237,0.3)')}>
+            <p style={{ margin: 0, fontWeight: 700, color: '#a78bfa', fontSize: 14, letterSpacing: '0.05em' }}>
+              PERSON 1 – DU
+            </p>
+            <div style={fieldStyle}>
+              <label htmlFor="name" style={labelStyle}>
+                Namn <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input type="text" id="name" value={name}
+                onChange={e => { setName(e.target.value); clearError('name') }}
+                onBlur={e => handleBlur('name', e.target.value)}
+                required aria-required="true"
+                aria-invalid={errors.name ? 'true' : 'false'}
+                style={inputStyle(!!errors.name)} placeholder="För- och efternamn"
+              />
+              {errors.name && <p style={errorStyle} role="alert">{errors.name}</p>}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={fieldStyle}>
+                <label htmlFor="phone" style={labelStyle}>
+                  Telefon <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input type="tel" id="phone" value={phone}
+                  onChange={e => { setPhone(e.target.value); clearError('phone') }}
+                  onBlur={e => handleBlur('phone', e.target.value)}
+                  required aria-required="true"
+                  aria-invalid={errors.phone ? 'true' : 'false'}
+                  style={inputStyle(!!errors.phone)} placeholder="070-123 45 67"
+                />
+                {errors.phone && <p style={errorStyle} role="alert">{errors.phone}</p>}
+              </div>
+              <div style={fieldStyle}>
+                <label htmlFor="email" style={labelStyle}>
+                  E-post <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input type="email" id="email" value={email}
+                  onChange={e => { setEmail(e.target.value); clearError('email') }}
+                  onBlur={e => handleBlur('email', e.target.value)}
+                  required aria-required="true"
+                  aria-invalid={errors.email ? 'true' : 'false'}
+                  style={inputStyle(!!errors.email)} placeholder="din@email.se"
+                />
+                {errors.email && <p style={errorStyle} role="alert">{errors.email}</p>}
+              </div>
+            </div>
           </div>
-          <div>
-            <label htmlFor="partner_email" className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Partnerns e-postadress <span className="text-red-500" aria-label="obligatoriskt">*</span>
+
+          {/* Person 2 */}
+          <div style={personCardStyle('rgba(236,72,153,0.1)', 'rgba(236,72,153,0.25)')}>
+            <p style={{ margin: 0, fontWeight: 700, color: '#f9a8d4', fontSize: 14, letterSpacing: '0.05em' }}>
+              PERSON 2 – DIN PARTNER
+            </p>
+            <div style={fieldStyle}>
+              <label htmlFor="partner_name" style={labelStyle}>
+                Namn <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input type="text" id="partner_name" value={partnerName}
+                onChange={e => { setPartnerName(e.target.value); clearError('partner_name') }}
+                onBlur={e => handleBlur('partner_name', e.target.value)}
+                required aria-required="true"
+                aria-invalid={errors.partner_name ? 'true' : 'false'}
+                style={inputStyle(!!errors.partner_name)} placeholder="För- och efternamn"
+              />
+              {errors.partner_name && <p style={errorStyle} role="alert">{errors.partner_name}</p>}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={fieldStyle}>
+                <label htmlFor="partner_phone" style={labelStyle}>
+                  Telefon <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input type="tel" id="partner_phone" value={partnerPhone}
+                  onChange={e => { setPartnerPhone(e.target.value); clearError('partner_phone') }}
+                  onBlur={e => handleBlur('partner_phone', e.target.value)}
+                  required aria-required="true"
+                  aria-invalid={errors.partner_phone ? 'true' : 'false'}
+                  style={inputStyle(!!errors.partner_phone)} placeholder="070-123 45 67"
+                />
+                {errors.partner_phone && <p style={errorStyle} role="alert">{errors.partner_phone}</p>}
+              </div>
+              <div style={fieldStyle}>
+                <label htmlFor="partner_email" style={labelStyle}>
+                  E-post <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input type="email" id="partner_email" value={partnerEmail}
+                  onChange={e => { setPartnerEmail(e.target.value); clearError('partner_email') }}
+                  onBlur={e => handleBlur('partner_email', e.target.value)}
+                  required aria-required="true"
+                  aria-invalid={errors.partner_email ? 'true' : 'false'}
+                  style={inputStyle(!!errors.partner_email)} placeholder="partner@email.se"
+                />
+                {errors.partner_email && <p style={errorStyle} role="alert">{errors.partner_email}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Ensam */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={fieldStyle}>
+            <label htmlFor="name" style={labelStyle}>
+              Namn <span style={{ color: '#ef4444' }}>*</span>
             </label>
-            <input
-              type="email"
-              id="partner_email"
-              value={partnerEmail}
-              onChange={e => { setPartnerEmail(e.target.value); if (errors.partner_email) setErrors(p => ({ ...p, partner_email: undefined })) }}
-              onBlur={e => handleBlur('partner_email', e.target.value)}
-              required={isPair}
-              aria-required={isPair ? 'true' : 'false'}
-              aria-invalid={errors.partner_email ? 'true' : 'false'}
-              aria-describedby={errors.partner_email ? 'partner-email-error' : undefined}
-              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-fest-purple focus:border-transparent transition-colors ${errors.partner_email ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'}`}
-              placeholder="partner@email.se"
+            <input type="text" id="name" value={name}
+              onChange={e => { setName(e.target.value); clearError('name') }}
+              onBlur={e => handleBlur('name', e.target.value)}
+              required aria-required="true"
+              style={inputStyle(!!errors.name)} placeholder="För- och efternamn"
             />
-            {errors.partner_email && <p id="partner-email-error" className="text-red-600 text-sm mt-1.5" role="alert">{errors.partner_email}</p>}
+            {errors.name && <p style={errorStyle} role="alert">{errors.name}</p>}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={fieldStyle}>
+              <label htmlFor="phone" style={labelStyle}>
+                Telefon <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input type="tel" id="phone" value={phone}
+                onChange={e => { setPhone(e.target.value); clearError('phone') }}
+                onBlur={e => handleBlur('phone', e.target.value)}
+                required aria-required="true"
+                style={inputStyle(!!errors.phone)} placeholder="070-123 45 67"
+              />
+              {errors.phone && <p style={errorStyle} role="alert">{errors.phone}</p>}
+            </div>
+            <div style={fieldStyle}>
+              <label htmlFor="email" style={labelStyle}>
+                E-post <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input type="email" id="email" value={email}
+                onChange={e => { setEmail(e.target.value); clearError('email') }}
+                onBlur={e => handleBlur('email', e.target.value)}
+                required aria-required="true"
+                style={inputStyle(!!errors.email)} placeholder="din@email.se"
+              />
+              {errors.email && <p style={errorStyle} role="alert">{errors.email}</p>}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Kommentarer */}
-      <div>
-        <label htmlFor="notes" className="block text-sm font-semibold text-gray-700 mb-1.5">
-          Kommentarer <span className="text-gray-400 font-normal">(valfritt)</span>
+      {/* Adress – gemensam */}
+      <div style={fieldStyle}>
+        <label htmlFor="address" style={labelStyle}>
+          {isPair ? 'Er adress i Olovslund' : 'Din adress i Olovslund'}{' '}
+          <span style={{ color: '#ef4444' }}>*</span>
         </label>
-        <textarea
-          id="notes"
-          value={notes}
+        <input type="text" id="address" value={address}
+          onChange={e => { setAddress(e.target.value); clearError('address') }}
+          onBlur={e => handleBlur('address', e.target.value)}
+          required aria-required="true"
+          style={inputStyle(!!errors.address)} placeholder="Gatunamn 12"
+        />
+        {errors.address && <p style={errorStyle} role="alert">{errors.address}</p>}
+      </div>
+
+      {/* Kommentarer */}
+      <div style={fieldStyle}>
+        <label htmlFor="notes" style={labelStyle}>
+          Kommentarer <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(valfritt)</span>
+        </label>
+        <textarea id="notes" value={notes}
           onChange={e => setNotes(e.target.value)}
           rows={3}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fest-purple focus:border-transparent transition-colors resize-none"
+          style={{ ...inputStyle(false), resize: 'none' }}
           placeholder="Allergier, önskemål eller annat vi bör veta"
         />
       </div>
 
       {/* Submit */}
       <button
-        type="submit"
-        disabled={isSubmitting}
-        aria-busy={isSubmitting}
-        className="w-full bg-gradient-to-r from-fest-purple to-fest-pink text-white font-bold py-4 px-6 rounded-2xl text-lg hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-fest-purple/30 hover:shadow-fest-purple/50 hover:-translate-y-0.5"
+        type="submit" disabled={isSubmitting} aria-busy={isSubmitting}
+        className="purple-gradient-btn"
+        style={{
+          padding: '16px 24px', borderRadius: 14, fontSize: 17,
+          boxShadow: '0 8px 24px rgba(124,58,237,0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          marginTop: 4,
+        }}
       >
         {isSubmitting ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          <>
+            <svg className="animate-spin" style={{ width: 20, height: 20 }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
             Skickar…
-          </span>
-        ) : 'Anmäl mig'}
+          </>
+        ) : '🎉 Anmäl oss'}
       </button>
     </form>
   )

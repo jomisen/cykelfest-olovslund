@@ -13,16 +13,17 @@ const schema = z
     is_pair: z.boolean(),
     partner_name: z.string().optional(),
     partner_email: z.string().email('Ange en giltig e-postadress för partner').optional().or(z.literal('')),
+    partner_phone: z.string().optional(),
     notes: z.string().optional(),
   })
   .refine(
     data => {
       if (data.is_pair) {
-        return !!data.partner_name?.trim() && !!data.partner_email?.trim()
+        return !!data.partner_name?.trim() && !!data.partner_email?.trim() && !!data.partner_phone?.trim()
       }
       return true
     },
-    { message: 'Partnerns namn och e-post krävs vid par-anmälan' }
+    { message: 'Partnerns namn, e-post och telefon krävs vid par-anmälan' }
   )
 
 export async function POST(request: NextRequest) {
@@ -37,10 +38,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Bygg insert-objektet utan partner_phone (kolumnen kanske saknas)
+    // Lägg istället till partner_phone i notes-fältet
+    const { partner_phone, notes, ...rest } = parsed.data
+    const combinedNotes = [
+      partner_phone ? `Partner telefon: ${partner_phone}` : null,
+      notes || null,
+    ].filter(Boolean).join('\n') || undefined
+
     const supabase = createServerClient()
     const { data, error } = await supabase
       .from('registrations')
-      .insert([parsed.data])
+      .insert([{ ...rest, notes: combinedNotes }])
       .select('id')
       .single()
 

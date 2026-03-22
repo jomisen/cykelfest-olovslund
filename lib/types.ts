@@ -8,6 +8,7 @@ export interface Registration {
   is_pair: boolean
   partner_name: string | null
   partner_email: string | null
+  partner_phone: string | null
   notes: string | null
   group_number: number | null
   course: 'forratt' | 'varmratt' | 'dessert' | null
@@ -23,5 +24,6 @@ export interface RegistrationFormData {
   is_pair: boolean
   partner_name?: string
   partner_email?: string
+  partner_phone?: string
   notes?: string
 }
