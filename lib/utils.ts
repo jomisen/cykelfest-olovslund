@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx'
 import type { Registration } from './types'
 
 export function formatDate(dateStr: string): string {
@@ -19,27 +20,36 @@ export function courseLabel(course: string | null): string {
   return course ? (labels[course] ?? course) : 'Ej tilldelad'
 }
 
-export function exportToCSV(registrations: Registration[]): void {
-  const headers = [
-    'Namn', 'E-post', 'Telefon', 'Adress', 'Typ',
-    'Partnerns namn', 'Partnerns e-post', 'Grupp', 'Rätt', 'Kommentarer', 'Anmälningsdatum',
-  ]
-  const rows = registrations.map(r => [
-    r.name, r.email, r.phone, r.address,
-    r.is_pair ? 'Par' : 'Ensam',
-    r.partner_name ?? '', r.partner_email ?? '',
-    r.group_number ? `Grupp ${r.group_number}` : '',
-    courseLabel(r.course), r.notes ?? '',
-    formatDate(r.created_at),
-  ])
-  const csv = [headers, ...rows]
-    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    .join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `cykelfest-anmalningar-${new Date().toISOString().split('T')[0]}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+export function exportToExcel(registrations: Registration[]): void {
+  const parsePartnerPhone = (r: Registration) =>
+    r.notes?.startsWith('Partner telefon:') ? r.notes.split('\n')[0].replace('Partner telefon: ', '') : ''
+  const parseNotes = (r: Registration) =>
+    r.notes?.startsWith('Partner telefon:') ? r.notes.split('\n').slice(1).join('\n') : (r.notes ?? '')
+
+  const rows = registrations.map(r => ({
+    'Namn': r.name,
+    'E-post': r.email,
+    'Telefon': r.phone,
+    'Adress': r.address,
+    'Typ': r.is_pair ? 'Par' : 'Ensam',
+    'Partnerns namn': r.partner_name ?? '',
+    'Partnerns e-post': r.partner_email ?? '',
+    'Partnerns telefon': parsePartnerPhone(r),
+    'Grupp': r.group_number ? `Grupp ${r.group_number}` : '',
+    'Rätt': courseLabel(r.course),
+    'Kommentarer': parseNotes(r),
+    'Anmälningsdatum': formatDate(r.created_at),
+  }))
+
+  const ws = XLSX.utils.json_to_sheet(rows)
+
+  // Auto-width per kolumn
+  const colWidths = Object.keys(rows[0] ?? {}).map(key => ({
+    wch: Math.max(key.length, ...rows.map(r => String(r[key as keyof typeof r]).length)) + 2
+  }))
+  ws['!cols'] = colWidths
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Anmälningar')
+  XLSX.writeFile(wb, `cykelfest-anmalningar-${new Date().toISOString().split('T')[0]}.xlsx`)
 }

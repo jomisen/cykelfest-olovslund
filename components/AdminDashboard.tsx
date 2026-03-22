@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import type { Registration, Course } from '@/lib/types'
-import { formatDate, exportToCSV } from '@/lib/utils'
+import { formatDate, exportToExcel } from '@/lib/utils'
 
 interface Props {
   pin: string
@@ -114,8 +114,8 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
           <button onClick={fetchRegistrations} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F3F4F6', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>
             ↻ Uppdatera
           </button>
-          <button onClick={() => exportToCSV(registrations)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#D1FAE5', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#065F46' }}>
-            ↓ Exportera CSV
+          <button onClick={() => exportToExcel(registrations)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#D1FAE5', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#065F46' }}>
+            ↓ Exportera Excel
           </button>
           <button onClick={onLogout} style={{ background: 'none', border: 'none', fontSize: 14, color: '#9CA3AF', cursor: 'pointer' }}>
             Logga ut
