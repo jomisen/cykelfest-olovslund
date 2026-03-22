@@ -12,6 +12,27 @@ interface Props {
 type FilterCourse = 'all' | Course | 'unassigned'
 type FilterType = 'all' | 'pair' | 'single'
 
+const GROUP_COLORS: Record<number, { bg: string; text: string; border: string }> = {
+  1:  { bg: '#EDE9FE', text: '#5B21B6', border: '#C4B5FD' },
+  2:  { bg: '#FCE7F3', text: '#9D174D', border: '#F9A8D4' },
+  3:  { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7' },
+  4:  { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D' },
+  5:  { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' },
+  6:  { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' },
+  7:  { bg: '#F0FDF4', text: '#14532D', border: '#86EFAC' },
+  8:  { bg: '#FFF7ED', text: '#9A3412', border: '#FDBA74' },
+  9:  { bg: '#F0F9FF', text: '#0C4A6E', border: '#7DD3FC' },
+  10: { bg: '#FDF4FF', text: '#701A75', border: '#E879F9' },
+  11: { bg: '#F8FAFC', text: '#334155', border: '#94A3B8' },
+  12: { bg: '#FFFBEB', text: '#78350F', border: '#FDE68A' },
+}
+
+const COURSES: { value: Course; label: string; color: string; bg: string }[] = [
+  { value: 'forratt',  label: 'Förrätt',  color: '#92400E', bg: '#FEF3C7' },
+  { value: 'varmratt', label: 'Varmrätt', color: '#9A3412', bg: '#FFF7ED' },
+  { value: 'dessert',  label: 'Dessert',  color: '#9D174D', bg: '#FCE7F3' },
+]
+
 export default function AdminDashboard({ pin, onLogout }: Props) {
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -24,9 +45,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
     setIsLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/registrations', {
-        headers: { 'x-admin-pin': pin },
-      })
+      const res = await fetch('/api/registrations', { headers: { 'x-admin-pin': pin } })
       if (!res.ok) throw new Error('Kunde inte hämta anmälningar')
       const data = await res.json()
       setRegistrations(data.registrations)
@@ -37,9 +56,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
     }
   }, [pin])
 
-  useEffect(() => {
-    fetchRegistrations()
-  }, [fetchRegistrations])
+  useEffect(() => { fetchRegistrations() }, [fetchRegistrations])
 
   const handleUpdate = async (id: string, update: Partial<Pick<Registration, 'group_number' | 'course'>>) => {
     setUpdating(p => ({ ...p, [id]: true }))
@@ -50,9 +67,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
         body: JSON.stringify(update),
       })
       if (!res.ok) throw new Error()
-      setRegistrations(prev =>
-        prev.map(r => (r.id === id ? { ...r, ...update } : r))
-      )
+      setRegistrations(prev => prev.map(r => r.id === id ? { ...r, ...update } : r))
     } catch {
       alert('Kunde inte uppdatera. Försök igen.')
     } finally {
@@ -78,185 +93,228 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
     unassigned: registrations.filter(r => !r.course).length,
   }
 
+  const s: Record<string, React.CSSProperties> = {
+    page:    { minHeight: '100vh', background: '#F8F7FF', fontFamily: 'system-ui, sans-serif', color: '#1A1A1A' },
+    header:  { background: 'white', borderBottom: '1px solid #E5E7EB', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+    body:    { maxWidth: 1300, margin: '0 auto', padding: '24px 24px' },
+    card:    { background: 'white', borderRadius: 16, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
+    th:      { padding: '10px 16px', fontWeight: 600, fontSize: 12, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#6B7280', background: '#F9FAFB', textAlign: 'left' as const, borderBottom: '1px solid #E5E7EB' },
+    td:      { padding: '14px 16px', borderBottom: '1px solid #F3F4F6', verticalAlign: 'top' as const },
+  }
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <div style={s.page}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-fest-dark">Cykelfest – Admin</h1>
-            <p className="text-sm text-gray-500">Olovslunds Trädgårdsförening</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => exportToCSV(registrations)}
-              className="flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 font-semibold px-4 py-2 rounded-xl text-sm transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-              </svg>
-              Exportera CSV
-            </button>
-            <button
-              onClick={fetchRegistrations}
-              className="flex items-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold px-4 py-2 rounded-xl text-sm transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Uppdatera
-            </button>
-            <button
-              onClick={onLogout}
-              className="text-gray-500 hover:text-gray-700 text-sm font-medium"
-            >
-              Logga ut
-            </button>
-          </div>
+      <header style={s.header}>
+        <div>
+          <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Admin</p>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#1A1A1A' }}>Cykelfest – Olovslund</h1>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={fetchRegistrations} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F3F4F6', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>
+            ↻ Uppdatera
+          </button>
+          <button onClick={() => exportToCSV(registrations)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#D1FAE5', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#065F46' }}>
+            ↓ Exportera CSV
+          </button>
+          <button onClick={onLogout} style={{ background: 'none', border: 'none', fontSize: 14, color: '#9CA3AF', cursor: 'pointer' }}>
+            Logga ut
+          </button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <div style={s.body}>
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 24 }}>
           {[
-            { label: 'Totalt', value: stats.total, color: 'bg-fest-purple text-white' },
-            { label: 'Par', value: stats.pairs, color: 'bg-pink-100 text-pink-700' },
-            { label: 'Ensamma', value: stats.singles, color: 'bg-blue-100 text-blue-700' },
-            { label: 'Förrätt', value: stats.forratt, color: 'bg-amber-100 text-amber-700' },
-            { label: 'Varmrätt', value: stats.varmratt, color: 'bg-orange-100 text-orange-700' },
-            { label: 'Dessert', value: stats.dessert, color: 'bg-rose-100 text-rose-700' },
+            { label: 'Totalt', value: stats.total,     bg: '#7C3AED', text: 'white' },
+            { label: 'Par',    value: stats.pairs,     bg: '#FCE7F3', text: '#9D174D' },
+            { label: 'Ensamma',value: stats.singles,   bg: '#DBEAFE', text: '#1E40AF' },
+            { label: 'Förrätt',value: stats.forratt,   bg: '#FEF3C7', text: '#92400E' },
+            { label: 'Varmrätt',value: stats.varmratt, bg: '#FFF7ED', text: '#9A3412' },
+            { label: 'Dessert',value: stats.dessert,   bg: '#FCE7F3', text: '#9D174D' },
           ].map(stat => (
-            <div key={stat.label} className={`${stat.color} rounded-2xl p-4 text-center`}>
-              <p className="text-3xl font-bold">{stat.value}</p>
-              <p className="text-sm font-medium opacity-80 mt-0.5">{stat.label}</p>
+            <div key={stat.label} style={{ background: stat.bg, borderRadius: 14, padding: '16px 20px', textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: 28, fontWeight: 800, color: stat.text }}>{stat.value}</p>
+              <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 500, color: stat.text, opacity: 0.7 }}>{stat.label}</p>
             </div>
           ))}
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-200 flex flex-wrap gap-3">
-          <div>
-            <label htmlFor="filter-type" className="text-xs font-semibold text-gray-500 block mb-1">Typ</label>
-            <select
-              id="filter-type"
-              value={filterType}
-              onChange={e => setFilterType(e.target.value as FilterType)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fest-purple focus:border-transparent"
-            >
-              <option value="all">Alla ({registrations.length})</option>
-              <option value="pair">Par ({stats.pairs})</option>
-              <option value="single">Ensamma ({stats.singles})</option>
-            </select>
+        {/* Filter */}
+        <div style={{ ...s.card, padding: '14px 20px', marginBottom: 16, display: 'flex', flexWrap: 'wrap' as const, gap: 12, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {([['all','Alla'], ['pair','Par'], ['single','Ensamma']] as const).map(([val, label]) => (
+              <button key={val} onClick={() => setFilterType(val)}
+                style={{ padding: '6px 14px', borderRadius: 20, border: '1.5px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                  background: filterType === val ? '#7C3AED' : 'white',
+                  color: filterType === val ? 'white' : '#6B7280',
+                  borderColor: filterType === val ? '#7C3AED' : '#E5E7EB',
+                }}>
+                {label}
+              </button>
+            ))}
           </div>
-          <div>
-            <label htmlFor="filter-course" className="text-xs font-semibold text-gray-500 block mb-1">Rätt</label>
-            <select
-              id="filter-course"
-              value={filterCourse}
-              onChange={e => setFilterCourse(e.target.value as FilterCourse)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-fest-purple focus:border-transparent"
-            >
-              <option value="all">Alla rätter</option>
-              <option value="forratt">Förrätt ({stats.forratt})</option>
-              <option value="varmratt">Varmrätt ({stats.varmratt})</option>
-              <option value="dessert">Dessert ({stats.dessert})</option>
-              <option value="unassigned">Ej tilldelade ({stats.unassigned})</option>
-            </select>
+          <div style={{ width: 1, height: 24, background: '#E5E7EB' }} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            {([['all','Alla rätter'], ['forratt','Förrätt'], ['varmratt','Varmrätt'], ['dessert','Dessert'], ['unassigned','Ej tilldelade']] as const).map(([val, label]) => (
+              <button key={val} onClick={() => setFilterCourse(val)}
+                style={{ padding: '6px 14px', borderRadius: 20, border: '1.5px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                  background: filterCourse === val ? '#1A1A1A' : 'white',
+                  color: filterCourse === val ? 'white' : '#6B7280',
+                  borderColor: filterCourse === val ? '#1A1A1A' : '#E5E7EB',
+                }}>
+                {label}
+              </button>
+            ))}
           </div>
-          <div className="ml-auto self-end text-sm text-gray-500">
-            Visar {filtered.length} av {registrations.length}
-          </div>
+          <span style={{ marginLeft: 'auto', fontSize: 13, color: '#9CA3AF' }}>
+            {filtered.length} av {registrations.length} visas
+          </span>
         </div>
 
-        {/* Table */}
+        {/* Tabell */}
         {isLoading ? (
-          <div className="text-center py-20 text-gray-500">Laddar anmälningar…</div>
+          <div style={{ textAlign: 'center', padding: 80, color: '#9CA3AF' }}>Laddar…</div>
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-6 text-center">{error}</div>
+          <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 14, padding: 24, color: '#991B1B', textAlign: 'center' }}>{error}</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">Inga anmälningar att visa</div>
+          <div style={{ textAlign: 'center', padding: 80, color: '#9CA3AF' }}>Inga anmälningar att visa</div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
+          <div style={s.card}>
+            <div style={{ overflowX: 'auto' as const }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 14 }}>
+                <thead>
                   <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-600">Namn</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-600">Kontakt</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-600">Adress</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-600">Typ</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-600">Grupp</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-600">Rätt</th>
-                    <th className="text-left px-4 py-3 font-semibold text-gray-600">Datum</th>
+                    <th style={s.th}>Namn</th>
+                    <th style={s.th}>Kontakt</th>
+                    <th style={s.th}>Adress</th>
+                    <th style={s.th}>Grupp</th>
+                    <th style={s.th}>Rätt</th>
+                    <th style={s.th}>Datum</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filtered.map(r => (
-                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-fest-dark">{r.name}</p>
-                        {r.is_pair && r.partner_name && (
-                          <p className="text-xs text-gray-500 mt-0.5">+ {r.partner_name}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        <p>{r.email}</p>
-                        <p className="text-xs text-gray-400">{r.phone}</p>
-                        {r.is_pair && r.partner_email && (
-                          <p className="text-xs text-gray-400 mt-0.5">{r.partner_email}</p>
-                        )}
-                        {r.is_pair && r.notes?.startsWith('Partner telefon:') && (
-                          <p className="text-xs text-gray-400">{r.notes.split('\n')[0]}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 max-w-32">
-                        <p className="truncate">{r.address}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-1 rounded-lg text-xs font-semibold ${r.is_pair ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'}`}>
-                          {r.is_pair ? 'Par' : 'Ensam'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={r.group_number ?? ''}
-                          onChange={e => handleUpdate(r.id, { group_number: e.target.value ? Number(e.target.value) : null })}
-                          disabled={updating[r.id]}
-                          aria-label={`Grupp för ${r.name}`}
-                          className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-fest-purple focus:border-transparent disabled:opacity-50 w-full"
-                        >
-                          <option value="">–</option>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
-                            <option key={n} value={n}>Grupp {n}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={r.course ?? ''}
-                          onChange={e => handleUpdate(r.id, { course: (e.target.value as Course) || null })}
-                          disabled={updating[r.id]}
-                          aria-label={`Rätt för ${r.name}`}
-                          className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-fest-purple focus:border-transparent disabled:opacity-50 w-full"
-                        >
-                          <option value="">–</option>
-                          <option value="forratt">Förrätt</option>
-                          <option value="varmratt">Varmrätt</option>
-                          <option value="dessert">Dessert</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
-                        {formatDate(r.created_at)}
-                      </td>
-                    </tr>
-                  ))}
+                <tbody>
+                  {filtered.map(r => {
+                    const grpColor = r.group_number ? GROUP_COLORS[r.group_number] : null
+                    const partnerPhone = r.notes?.startsWith('Partner telefon:') ? r.notes.split('\n')[0].replace('Partner telefon: ', '') : null
+                    const userNotes = r.notes?.startsWith('Partner telefon:') ? r.notes.split('\n').slice(1).join('\n') : r.notes
+
+                    return (
+                      <tr key={r.id} style={{ background: grpColor ? grpColor.bg + '55' : 'white', transition: 'background 0.2s' }}>
+
+                        {/* Navn */}
+                        <td style={s.td}>
+                          {r.is_pair ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ width: 22, height: 22, background: '#EDE9FE', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#7C3AED', flexShrink: 0 }}>1</span>
+                                <span style={{ fontWeight: 700, color: '#1A1A1A' }}>{r.name}</span>
+                              </div>
+                              {r.partner_name && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ width: 22, height: 22, background: '#FCE7F3', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#EC4899', flexShrink: 0 }}>2</span>
+                                  <span style={{ fontWeight: 700, color: '#1A1A1A' }}>{r.partner_name}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ fontWeight: 700, color: '#1A1A1A' }}>{r.name}</span>
+                          )}
+                          {userNotes && (
+                            <p style={{ margin: '6px 0 0', fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>{userNotes}</p>
+                          )}
+                        </td>
+
+                        {/* Kontakt */}
+                        <td style={s.td}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <span style={{ color: '#374151' }}>{r.email}</span>
+                            <span style={{ fontSize: 12, color: '#9CA3AF' }}>{r.phone}</span>
+                            {r.is_pair && r.partner_email && (
+                              <>
+                                <span style={{ fontSize: 12, color: '#EC4899', marginTop: 4 }}>{r.partner_email}</span>
+                                {partnerPhone && <span style={{ fontSize: 12, color: '#9CA3AF' }}>{partnerPhone}</span>}
+                              </>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Adress */}
+                        <td style={{ ...s.td, maxWidth: 140 }}>
+                          <span style={{ color: '#374151' }}>{r.address}</span>
+                        </td>
+
+                        {/* Grupp – klickbara siffror */}
+                        <td style={s.td}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(n => {
+                              const c = GROUP_COLORS[n]
+                              const active = r.group_number === n
+                              return (
+                                <button
+                                  key={n}
+                                  onClick={() => handleUpdate(r.id, { group_number: active ? null : n })}
+                                  disabled={updating[r.id]}
+                                  title={`Grupp ${n}`}
+                                  style={{
+                                    width: 30, height: 30, borderRadius: 8,
+                                    border: `2px solid ${active ? c.border : '#E5E7EB'}`,
+                                    background: active ? c.bg : 'white',
+                                    color: active ? c.text : '#9CA3AF',
+                                    fontWeight: 700, fontSize: 13,
+                                    cursor: 'pointer', transition: 'all 0.15s',
+                                    opacity: updating[r.id] ? 0.5 : 1,
+                                  }}
+                                >
+                                  {n}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </td>
+
+                        {/* Rätt – klickbara pills */}
+                        <td style={s.td}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {COURSES.map(c => {
+                              const active = r.course === c.value
+                              return (
+                                <button
+                                  key={c.value}
+                                  onClick={() => handleUpdate(r.id, { course: active ? null : c.value })}
+                                  disabled={updating[r.id]}
+                                  style={{
+                                    padding: '5px 12px', borderRadius: 20,
+                                    border: `1.5px solid ${active ? c.color : '#E5E7EB'}`,
+                                    background: active ? c.bg : 'white',
+                                    color: active ? c.color : '#9CA3AF',
+                                    fontWeight: active ? 700 : 500, fontSize: 13,
+                                    cursor: 'pointer', transition: 'all 0.15s',
+                                    opacity: updating[r.id] ? 0.5 : 1,
+                                    textAlign: 'left' as const,
+                                  }}
+                                >
+                                  {c.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </td>
+
+                        {/* Datum */}
+                        <td style={{ ...s.td, whiteSpace: 'nowrap' as const }}>
+                          <span style={{ fontSize: 12, color: '#9CA3AF' }}>{formatDate(r.created_at)}</span>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
         )}
       </div>
-    </main>
+    </div>
   )
 }
