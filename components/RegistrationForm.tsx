@@ -132,15 +132,20 @@ export default function RegistrationForm() {
   const errorStyle = { color: '#f87171', fontSize: 13, marginTop: 5 }
   const fieldStyle = { display: 'flex', flexDirection: 'column' as const }
 
-  const personCardStyle = (bg: string, border: string) => ({
-    background: bg,
+  const personCardStyle = () => ({
+    background: 'rgba(255,255,255,0.05)',
     borderRadius: 16, padding: 24,
-    border: `1px solid ${border}`,
+    border: '1px solid rgba(255,255,255,0.13)',
     display: 'flex', flexDirection: 'column' as const, gap: 18,
   })
 
   return (
     <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* Datum */}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 100, padding: '8px 18px', alignSelf: 'flex-start' }}>
+        <span style={{ fontSize: 14, color: 'rgba(240,235,255,0.9)', fontWeight: 700 }}>📅 12 juni · kl 18.00</span>
+      </div>
 
       {/* Ensam / Par toggle */}
       <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
@@ -171,8 +176,8 @@ export default function RegistrationForm() {
       {isPair ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Person 1 */}
-          <div style={personCardStyle('rgba(124,58,237,0.12)', 'rgba(124,58,237,0.3)')}>
-            <p style={{ margin: 0, fontWeight: 700, color: '#a78bfa', fontSize: 14, letterSpacing: '0.05em' }}>
+          <div style={personCardStyle()}>
+            <p style={{ margin: 0, fontWeight: 700, color: 'rgba(240,235,255,0.6)', fontSize: 13, letterSpacing: '0.06em' }}>
               PERSON 1 – DU
             </p>
             <div style={fieldStyle}>
@@ -219,8 +224,8 @@ export default function RegistrationForm() {
           </div>
 
           {/* Person 2 */}
-          <div style={personCardStyle('rgba(236,72,153,0.1)', 'rgba(236,72,153,0.25)')}>
-            <p style={{ margin: 0, fontWeight: 700, color: '#f9a8d4', fontSize: 14, letterSpacing: '0.05em' }}>
+          <div style={personCardStyle()}>
+            <p style={{ margin: 0, fontWeight: 700, color: 'rgba(240,235,255,0.6)', fontSize: 13, letterSpacing: '0.06em' }}>
               PERSON 2 – DIN PARTNER
             </p>
             <div style={fieldStyle}>
