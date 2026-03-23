@@ -37,7 +37,7 @@ export default function Home() {
             där vi tillsammans lär känna varandra och området på ett nytt sätt.
           </p>
           <p style={{ fontSize: '1.05rem', lineHeight: 1.8, color: muted, marginBottom: 20 }}>
-            Varje par eller ensam deltagare ansvarar för en rätt – förrätt, varmrätt eller dessert –
+            Varje anmält hushåll ansvarar för en rätt – förrätt, varmrätt eller dessert –
             som serveras hemma hos er. Under kvällen rör sig alla mellan varandras hem: ni äter
             förrätten hos ett hushåll, varmrätten hos ett annat och desserten hos ett tredje.
             Det innebär att ni träffar nya människor vid varje stopp. Ni får i förväg veta
