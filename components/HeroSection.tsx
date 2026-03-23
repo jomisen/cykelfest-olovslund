@@ -63,6 +63,19 @@ export default function HeroSection() {
           <span style={{ color: '#C4B5FD' }}>i Olovslund</span>
         </h1>
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'rgba(255,255,255,0.15)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: 100, padding: '7px 20px',
+          }}>
+            <span style={{ fontSize: 15, color: 'white', fontWeight: 700 }}>📅</span>
+            <span style={{ fontSize: 15, color: 'white', fontWeight: 700 }}>12 juni · kl 18.00</span>
+          </div>
+        </div>
+
         <p style={{
           fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)',
           color: 'rgba(255,255,255,0.88)',
