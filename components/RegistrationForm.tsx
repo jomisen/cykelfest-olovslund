@@ -115,7 +115,7 @@ export default function RegistrationForm() {
     }
   }
 
-  if (isSuccess) return <SuccessState name={submittedName} />
+  if (isSuccess) return <SuccessState name={submittedName} isPair={isPair} />
 
   const inputStyle = (hasError: boolean) => ({
     width: '100%', padding: '13px 16px',
@@ -193,7 +193,7 @@ export default function RegistrationForm() {
               />
               {errors.name && <p style={errorStyle} role="alert">{errors.name}</p>}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
               <div style={fieldStyle}>
                 <label htmlFor="phone" style={labelStyle}>
                   Telefon <span style={{ color: '#ef4444' }}>*</span>
@@ -241,7 +241,7 @@ export default function RegistrationForm() {
               />
               {errors.partner_name && <p style={errorStyle} role="alert">{errors.partner_name}</p>}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
               <div style={fieldStyle}>
                 <label htmlFor="partner_phone" style={labelStyle}>
                   Telefon <span style={{ color: '#ef4444' }}>*</span>
@@ -286,7 +286,7 @@ export default function RegistrationForm() {
             />
             {errors.name && <p style={errorStyle} role="alert">{errors.name}</p>}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
             <div style={fieldStyle}>
               <label htmlFor="phone" style={labelStyle}>
                 Telefon <span style={{ color: '#ef4444' }}>*</span>

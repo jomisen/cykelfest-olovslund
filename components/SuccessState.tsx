@@ -1,8 +1,9 @@
 interface Props {
   name: string
+  isPair: boolean
 }
 
-export default function SuccessState({ name }: Props) {
+export default function SuccessState({ name, isPair }: Props) {
   const firstName = name.split(' ')[0]
   return (
     <div className="animate-scale-in" style={{ textAlign: 'center', padding: '16px 0' }}>
@@ -18,7 +19,7 @@ export default function SuccessState({ name }: Props) {
         Tack, {firstName}!
       </h2>
       <p style={{ color: 'rgba(240,235,255,0.6)', fontSize: '1.05rem', marginBottom: 32, lineHeight: 1.6 }}>
-        Din anmälan är mottagen. Vi återkommer med mer<br />information om tider och adresser.
+        {isPair ? 'Er' : 'Din'} anmälan är mottagen. Vi återkommer med mer<br />information om tider och adresser.
       </p>
 
       <div style={{
