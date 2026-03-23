@@ -10,9 +10,7 @@ interface Props {
   onLogout: () => void
 }
 
-type FilterCourse = 'all' | Course | 'unassigned'
-type FilterType = 'all' | 'pair' | 'single'
-type Tab = 'list' | 'schedule'
+type Tab = 'registrations' | 'planning' | 'schedule'
 
 const COURSES: { value: Course; label: string; color: string; bg: string; border: string }[] = [
   { value: 'forratt',  label: 'Förrätt',  color: '#92400E', bg: '#FEF3C7', border: '#FCD34D' },
@@ -35,16 +33,23 @@ function tableColor(n: number) {
   return TABLE_COLORS[(n - 1) % TABLE_COLORS.length]
 }
 
+function parsePartnerPhone(r: Registration) {
+  return r.notes?.startsWith('Partner telefon:') ? r.notes.split('\n')[0].replace('Partner telefon: ', '') : null
+}
+function parseNotes(r: Registration) {
+  return r.notes?.startsWith('Partner telefon:') ? r.notes.split('\n').slice(1).join('\n') : r.notes
+}
+function displayName(r: Registration) {
+  return r.partner_name ? `${r.name} & ${r.partner_name}` : r.name
+}
+
 export default function AdminDashboard({ pin, onLogout }: Props) {
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const [filterCourse, setFilterCourse] = useState<FilterCourse>('all')
-  const [filterType, setFilterType] = useState<FilterType>('all')
-  const [updating, setUpdating] = useState<Record<string, boolean>>({})
-  const [generating, setGenerating] = useState(false)
-  const [tab, setTab] = useState<Tab>('list')
+  const [tab, setTab] = useState<Tab>('registrations')
   const [collisions, setCollisions] = useState<Collision[]>([])
+  const [generating, setGenerating] = useState(false)
 
   const fetchRegistrations = useCallback(async () => {
     setIsLoading(true)
@@ -65,8 +70,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
 
   useEffect(() => { fetchRegistrations() }, [fetchRegistrations])
 
-  const handleUpdate = async (id: string, update: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => {
-    setUpdating(p => ({ ...p, [id]: true }))
+  const handleUpdate = useCallback(async (id: string, update: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => {
     try {
       const res = await fetch(`/api/registrations/${id}`, {
         method: 'PATCH',
@@ -79,18 +83,35 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
       setCollisions(detectCollisions(updated))
     } catch {
       alert('Kunde inte uppdatera. Försök igen.')
-    } finally {
-      setUpdating(p => ({ ...p, [id]: false }))
     }
-  }
+  }, [pin, registrations])
 
-  const handleGenerateAction = async (action: 'auto-hosting' | 'generate') => {
+  const handleDelete = useCallback(async (id: string, name: string) => {
+    if (!confirm(`Ta bort ${name}? Detta går inte att ångra.`)) return
+    try {
+      const res = await fetch(`/api/registrations/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-pin': pin },
+      })
+      if (!res.ok) throw new Error()
+      const updated = registrations.filter(r => r.id !== id)
+      setRegistrations(updated)
+      setCollisions(detectCollisions(updated))
+    } catch {
+      alert('Kunde inte ta bort. Försök igen.')
+    }
+  }, [pin, registrations])
+
+  const handleGenerateAction = async (action: 'auto-hosting' | 'generate' | 'reset') => {
     if (action === 'generate') {
       const unassigned = registrations.filter(r => !r.course).length
       if (unassigned > 0) {
         alert(`${unassigned} hushåll saknar värdskapsrätt. Tilldela alla först.`)
         return
       }
+    }
+    if (action === 'reset') {
+      if (!confirm('Återställ alla bordstilldelningar? Värdskapen behålls.')) return
     }
     setGenerating(true)
     try {
@@ -110,21 +131,16 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
     }
   }
 
-  const filtered = registrations.filter(r => {
-    if (filterType === 'pair' && !r.is_pair) return false
-    if (filterType === 'single' && r.is_pair) return false
-    if (filterCourse === 'unassigned' && r.course) return false
-    if (filterCourse !== 'all' && filterCourse !== 'unassigned' && r.course !== filterCourse) return false
-    return true
-  })
-
   const stats = {
     total: registrations.length,
     pairs: registrations.filter(r => r.is_pair).length,
     singles: registrations.filter(r => !r.is_pair).length,
     withHost: registrations.filter(r => r.course).length,
-    scheduled: registrations.filter(r => r.table_forratt).length,
+    scheduled: registrations.filter(r => r.table_forratt != null).length,
   }
+
+  const allHosted = stats.withHost === stats.total && stats.total > 0
+  const hasSchedule = stats.scheduled > 0
 
   const s: Record<string, React.CSSProperties> = {
     page:   { minHeight: '100vh', background: '#F8F7FF', fontFamily: 'system-ui, sans-serif', color: '#1A1A1A' },
@@ -137,22 +153,15 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
 
   return (
     <div style={s.page}>
-      {/* Header */}
       <header style={s.header}>
         <div>
           <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Admin</p>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#1A1A1A' }}>Cykelfest – Olovslund</h1>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={fetchRegistrations} style={{ background: '#F3F4F6', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>
-            ↻ Uppdatera
-          </button>
-          <button onClick={() => exportToExcel(registrations)} style={{ background: '#D1FAE5', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#065F46' }}>
-            ↓ Excel
-          </button>
-          <button onClick={onLogout} style={{ background: 'none', border: 'none', fontSize: 14, color: '#9CA3AF', cursor: 'pointer' }}>
-            Logga ut
-          </button>
+          <button onClick={fetchRegistrations} style={{ background: '#F3F4F6', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>↻ Uppdatera</button>
+          <button onClick={() => exportToExcel(registrations)} style={{ background: '#D1FAE5', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#065F46' }}>↓ Excel</button>
+          <button onClick={onLogout} style={{ background: 'none', border: 'none', fontSize: 14, color: '#9CA3AF', cursor: 'pointer' }}>Logga ut</button>
         </div>
       </header>
 
@@ -160,11 +169,11 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 24 }}>
           {[
-            { label: 'Totalt',       value: stats.total,     bg: '#7C3AED', text: 'white' },
-            { label: 'Par',          value: stats.pairs,     bg: '#FCE7F3', text: '#9D174D' },
-            { label: 'Ensamma',      value: stats.singles,   bg: '#DBEAFE', text: '#1E40AF' },
-            { label: 'Värd tilldelad', value: stats.withHost, bg: '#D1FAE5', text: '#065F46' },
-            { label: 'Schemalagda', value: stats.scheduled,  bg: '#FEF3C7', text: '#92400E' },
+            { label: 'Totalt',          value: stats.total,     bg: '#7C3AED', text: 'white' },
+            { label: 'Par',             value: stats.pairs,     bg: '#FCE7F3', text: '#9D174D' },
+            { label: 'Ensamma',         value: stats.singles,   bg: '#DBEAFE', text: '#1E40AF' },
+            { label: 'Värd tilldelad',  value: stats.withHost,  bg: '#D1FAE5', text: '#065F46' },
+            { label: 'Schemalagda',     value: stats.scheduled, bg: '#FEF3C7', text: '#92400E' },
           ].map(stat => (
             <div key={stat.label} style={{ background: stat.bg, borderRadius: 14, padding: '16px 20px', textAlign: 'center' }}>
               <p style={{ margin: 0, fontSize: 28, fontWeight: 800, color: stat.text }}>{stat.value}</p>
@@ -173,55 +182,19 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
           ))}
         </div>
 
-        {/* Kollisionsvarningar */}
-        {collisions.length > 0 && (
-          <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 14, padding: '16px 20px', marginBottom: 16 }}>
-            <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 14, color: '#92400E' }}>
-              ⚠️ {collisions.length} kollision{collisions.length > 1 ? 'er' : ''} – samma sällskap träffas mer än en gång
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {collisions.map((c, i) => (
-                <span key={i} style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 20, padding: '4px 12px', fontSize: 13, color: '#92400E' }}>
-                  {c.nameA} & {c.nameB} ({c.courses.join(', ')})
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Schema-knappar */}
-        <div style={{ ...s.card, padding: '16px 20px', marginBottom: 16, display: 'flex', flexWrap: 'wrap' as const, gap: 10, alignItems: 'center' }}>
-          <button
-            onClick={() => handleGenerateAction('auto-hosting')}
-            disabled={generating}
-            style={{ background: '#EDE9FE', border: '1.5px solid #C4B5FD', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#5B21B6', opacity: generating ? 0.6 : 1 }}
-          >
-            🎲 Auto-fördela värdskap
-          </button>
-          <button
-            onClick={() => handleGenerateAction('generate')}
-            disabled={generating || stats.withHost < registrations.length}
-            title={stats.withHost < registrations.length ? 'Alla hushåll måste ha värdskap tilldelat först' : ''}
-            style={{ background: stats.withHost === registrations.length && registrations.length > 0 ? '#7C3AED' : '#E5E7EB', border: 'none', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14, cursor: stats.withHost === registrations.length && registrations.length > 0 ? 'pointer' : 'not-allowed', color: stats.withHost === registrations.length && registrations.length > 0 ? 'white' : '#9CA3AF', opacity: generating ? 0.6 : 1 }}
-          >
-            {generating ? 'Genererar…' : '✨ Generera schema'}
-          </button>
-          {stats.withHost < registrations.length && registrations.length > 0 && (
-            <span style={{ fontSize: 13, color: '#EF4444' }}>
-              {registrations.length - stats.withHost} hushåll saknar värdskap
-            </span>
-          )}
-        </div>
-
         {/* Flikar */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-          {(['list', 'schedule'] as Tab[]).map(t => (
-            <button key={t} onClick={() => setTab(t)}
+          {([
+            { key: 'registrations', label: 'Anmälningar' },
+            { key: 'planning',      label: 'Planering' },
+            { key: 'schedule',      label: hasSchedule ? 'Schema ✓' : 'Schema' },
+          ] as { key: Tab; label: string }[]).map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
               style={{ padding: '8px 20px', borderRadius: 10, border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer',
-                background: tab === t ? '#1A1A1A' : '#F3F4F6',
-                color: tab === t ? 'white' : '#6B7280',
+                background: tab === t.key ? '#1A1A1A' : '#F3F4F6',
+                color: tab === t.key ? 'white' : '#6B7280',
               }}>
-              {t === 'list' ? 'Anmälningar' : 'Schema'}
+              {t.label}
             </button>
           ))}
         </div>
@@ -230,162 +203,178 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
           <div style={{ textAlign: 'center', padding: 80, color: '#9CA3AF' }}>Laddar…</div>
         ) : error ? (
           <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 14, padding: 24, color: '#991B1B', textAlign: 'center' }}>{error}</div>
-        ) : tab === 'list' ? (
-          <ListTab
-            filtered={filtered} registrations={registrations}
-            filterType={filterType} setFilterType={setFilterType}
-            filterCourse={filterCourse} setFilterCourse={setFilterCourse}
-            updating={updating} handleUpdate={handleUpdate}
+        ) : tab === 'registrations' ? (
+          <RegistrationsTab registrations={registrations} handleDelete={handleDelete} s={s} />
+        ) : tab === 'planning' ? (
+          <PlanningTab
+            registrations={registrations}
+            allHosted={allHosted}
+            hasSchedule={hasSchedule}
+            generating={generating}
+            handleUpdate={handleUpdate}
+            handleGenerateAction={handleGenerateAction}
             s={s}
           />
         ) : (
-          <ScheduleTab registrations={registrations} />
+          <ScheduleTab registrations={registrations} collisions={collisions} hasSchedule={hasSchedule} />
         )}
       </div>
     </div>
   )
 }
 
-// ─── List Tab ────────────────────────────────────────────────────────────────
+// ─── Anmälningar ─────────────────────────────────────────────────────────────
 
-function ListTab({ filtered, registrations, filterType, setFilterType, filterCourse, setFilterCourse, updating, handleUpdate, s }: {
-  filtered: Registration[]
+function RegistrationsTab({ registrations, handleDelete, s }: {
   registrations: Registration[]
-  filterType: FilterType
-  setFilterType: (v: FilterType) => void
-  filterCourse: FilterCourse
-  setFilterCourse: (v: FilterCourse) => void
-  updating: Record<string, boolean>
-  handleUpdate: (id: string, update: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => Promise<void>
+  handleDelete: (id: string, name: string) => Promise<void>
   s: Record<string, React.CSSProperties>
 }) {
+  if (registrations.length === 0) {
+    return <div style={{ textAlign: 'center', padding: 80, color: '#9CA3AF' }}>Inga anmälningar än</div>
+  }
+
+  return (
+    <div style={s.card}>
+      <div style={{ overflowX: 'auto' as const }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 14 }}>
+          <thead>
+            <tr>
+              <th style={s.th}>Namn</th>
+              <th style={s.th}>Kontakt</th>
+              <th style={s.th}>Adress</th>
+              <th style={s.th}>Anmälningsdatum</th>
+              <th style={s.th}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {registrations.map(r => {
+              const partnerPhone = parsePartnerPhone(r)
+              const notes = parseNotes(r)
+              return (
+                <tr key={r.id}>
+                  <td style={s.td}>
+                    {r.is_pair ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ width: 22, height: 22, background: '#EDE9FE', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#7C3AED', flexShrink: 0 }}>1</span>
+                          <span style={{ fontWeight: 700, color: '#1A1A1A' }}>{r.name}</span>
+                        </div>
+                        {r.partner_name && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ width: 22, height: 22, background: '#FCE7F3', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#EC4899', flexShrink: 0 }}>2</span>
+                            <span style={{ fontWeight: 700, color: '#1A1A1A' }}>{r.partner_name}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ fontWeight: 700, color: '#1A1A1A' }}>{r.name}</span>
+                    )}
+                    {notes && <p style={{ margin: '5px 0 0', fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>{notes}</p>}
+                  </td>
+                  <td style={s.td}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ color: '#374151' }}>{r.email}</span>
+                      <span style={{ fontSize: 12, color: '#9CA3AF' }}>{r.phone}</span>
+                      {r.is_pair && r.partner_email && (
+                        <>
+                          <span style={{ fontSize: 12, color: '#EC4899', marginTop: 3 }}>{r.partner_email}</span>
+                          {partnerPhone && <span style={{ fontSize: 12, color: '#9CA3AF' }}>{partnerPhone}</span>}
+                        </>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{ ...s.td, color: '#374151' }}>{r.address}</td>
+                  <td style={{ ...s.td, whiteSpace: 'nowrap' as const }}>
+                    <span style={{ fontSize: 12, color: '#9CA3AF' }}>{formatDate(r.created_at)}</span>
+                  </td>
+                  <td style={{ ...s.td, textAlign: 'right' as const }}>
+                    <button
+                      onClick={() => handleDelete(r.id, displayName(r))}
+                      title="Ta bort"
+                      style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, color: '#DC2626', cursor: 'pointer' }}
+                    >
+                      Ta bort
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ─── Planering ────────────────────────────────────────────────────────────────
+
+function PlanningTab({ registrations, allHosted, hasSchedule, generating, handleUpdate, handleGenerateAction, s }: {
+  registrations: Registration[]
+  allHosted: boolean
+  hasSchedule: boolean
+  generating: boolean
+  handleUpdate: (id: string, update: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => Promise<void>
+  handleGenerateAction: (action: 'auto-hosting' | 'generate' | 'reset') => Promise<void>
+  s: Record<string, React.CSSProperties>
+}) {
+  const unassigned = registrations.filter(r => !r.course).length
+
   return (
     <>
-      {/* Filter */}
-      <div style={{ ...s.card, padding: '14px 20px', marginBottom: 16, display: 'flex', flexWrap: 'wrap' as const, gap: 12, alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {([['all','Alla'], ['pair','Par'], ['single','Ensamma']] as const).map(([val, label]) => (
-            <button key={val} onClick={() => setFilterType(val)}
-              style={{ padding: '6px 14px', borderRadius: 20, border: '1.5px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                background: filterType === val ? '#7C3AED' : 'white',
-                color: filterType === val ? 'white' : '#6B7280',
-                borderColor: filterType === val ? '#7C3AED' : '#E5E7EB',
-              }}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div style={{ width: 1, height: 24, background: '#E5E7EB' }} />
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
-          {([['all','Alla rätter'], ['forratt','Förrätt'], ['varmratt','Varmrätt'], ['dessert','Dessert'], ['unassigned','Ej tilldelad']] as const).map(([val, label]) => (
-            <button key={val} onClick={() => setFilterCourse(val)}
-              style={{ padding: '6px 14px', borderRadius: 20, border: '1.5px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                background: filterCourse === val ? '#1A1A1A' : 'white',
-                color: filterCourse === val ? 'white' : '#6B7280',
-                borderColor: filterCourse === val ? '#1A1A1A' : '#E5E7EB',
-              }}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <span style={{ marginLeft: 'auto', fontSize: 13, color: '#9CA3AF' }}>
-          {filtered.length} av {registrations.length} visas
-        </span>
+      {/* Knappar */}
+      <div style={{ ...s.card, padding: '16px 20px', marginBottom: 16, display: 'flex', flexWrap: 'wrap' as const, gap: 10, alignItems: 'center' }}>
+        <button
+          onClick={() => handleGenerateAction('auto-hosting')}
+          disabled={generating}
+          style={{ background: '#EDE9FE', border: '1.5px solid #C4B5FD', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#5B21B6', opacity: generating ? 0.6 : 1 }}
+        >
+          🎲 Auto-fördela värdskap
+        </button>
+
+        <button
+          onClick={() => handleGenerateAction('generate')}
+          disabled={generating || !allHosted}
+          title={!allHosted ? `${unassigned} hushåll saknar värdskapsrätt` : ''}
+          style={{ background: allHosted ? '#7C3AED' : '#E5E7EB', border: 'none', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14, cursor: allHosted ? 'pointer' : 'not-allowed', color: allHosted ? 'white' : '#9CA3AF', opacity: generating ? 0.6 : 1 }}
+        >
+          {generating ? 'Genererar…' : '✨ Generera schema'}
+        </button>
+
+        {hasSchedule && (
+          <button
+            onClick={() => handleGenerateAction('reset')}
+            disabled={generating}
+            style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#DC2626', opacity: generating ? 0.6 : 1 }}
+          >
+            ↺ Återställ schema
+          </button>
+        )}
+
+        {!allHosted && registrations.length > 0 && (
+          <span style={{ fontSize: 13, color: '#EF4444' }}>{unassigned} hushåll saknar värdskap</span>
+        )}
       </div>
 
-      {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 80, color: '#9CA3AF' }}>Inga anmälningar att visa</div>
+      {/* Tabell */}
+      {registrations.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 80, color: '#9CA3AF' }}>Inga anmälningar än</div>
       ) : (
         <div style={s.card}>
           <div style={{ overflowX: 'auto' as const }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 14 }}>
               <thead>
                 <tr>
-                  <th style={s.th}>Namn</th>
-                  <th style={s.th}>Kontakt</th>
+                  <th style={s.th}>Sällskap</th>
                   <th style={s.th}>Adress</th>
                   <th style={s.th}>Ansvarar för</th>
-                  <th style={s.th}>Bord F / V / D</th>
-                  <th style={s.th}>Datum</th>
+                  {hasSchedule && <th style={s.th}>Bord (F / V / D)</th>}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(r => {
-                  const partnerPhone = r.notes?.startsWith('Partner telefon:') ? r.notes.split('\n')[0].replace('Partner telefon: ', '') : null
-                  const userNotes = r.notes?.startsWith('Partner telefon:') ? r.notes.split('\n').slice(1).join('\n') : r.notes
-
-                  return (
-                    <tr key={r.id} style={{ background: 'white', transition: 'background 0.2s' }}>
-
-                      {/* Namn */}
-                      <td style={s.td}>
-                        {r.is_pair ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ width: 22, height: 22, background: '#EDE9FE', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#7C3AED', flexShrink: 0 }}>1</span>
-                              <span style={{ fontWeight: 700, color: '#1A1A1A' }}>{r.name}</span>
-                            </div>
-                            {r.partner_name && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ width: 22, height: 22, background: '#FCE7F3', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#EC4899', flexShrink: 0 }}>2</span>
-                                <span style={{ fontWeight: 700, color: '#1A1A1A' }}>{r.partner_name}</span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ fontWeight: 700, color: '#1A1A1A' }}>{r.name}</span>
-                        )}
-                        {userNotes && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>{userNotes}</p>}
-                      </td>
-
-                      {/* Kontakt */}
-                      <td style={s.td}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <span style={{ color: '#374151' }}>{r.email}</span>
-                          <span style={{ fontSize: 12, color: '#9CA3AF' }}>{r.phone}</span>
-                          {r.is_pair && r.partner_email && (
-                            <>
-                              <span style={{ fontSize: 12, color: '#EC4899', marginTop: 4 }}>{r.partner_email}</span>
-                              {partnerPhone && <span style={{ fontSize: 12, color: '#9CA3AF' }}>{partnerPhone}</span>}
-                            </>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Adress */}
-                      <td style={{ ...s.td, maxWidth: 150 }}>
-                        <span style={{ color: '#374151' }}>{r.address}</span>
-                      </td>
-
-                      {/* Ansvarar för (värdskap) */}
-                      <td style={s.td}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                          {COURSES.map(c => {
-                            const active = r.course === c.value
-                            return (
-                              <button key={c.value}
-                                onClick={() => handleUpdate(r.id, { course: active ? null : c.value })}
-                                disabled={updating[r.id]}
-                                style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${active ? c.border : '#E5E7EB'}`, background: active ? c.bg : 'white', color: active ? c.color : '#9CA3AF', fontWeight: active ? 700 : 500, fontSize: 13, cursor: 'pointer', textAlign: 'left' as const, opacity: updating[r.id] ? 0.5 : 1 }}>
-                                {c.label}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </td>
-
-                      {/* Bordsnummer per rätt */}
-                      <td style={s.td}>
-                        <TableNumberEditor r={r} updating={updating} handleUpdate={handleUpdate} />
-                      </td>
-
-                      {/* Datum */}
-                      <td style={{ ...s.td, whiteSpace: 'nowrap' as const }}>
-                        <span style={{ fontSize: 12, color: '#9CA3AF' }}>{formatDate(r.created_at)}</span>
-                      </td>
-                    </tr>
-                  )
-                })}
+                {registrations.map(r => (
+                  <PlanningRow key={r.id} r={r} hasSchedule={hasSchedule} handleUpdate={handleUpdate} s={s} />
+                ))}
               </tbody>
             </table>
           </div>
@@ -395,78 +384,148 @@ function ListTab({ filtered, registrations, filterType, setFilterType, filterCou
   )
 }
 
-// ─── Bordsnummer-editor ───────────────────────────────────────────────────────
-
-function TableNumberEditor({ r, updating, handleUpdate }: {
+function PlanningRow({ r, hasSchedule, handleUpdate, s }: {
   r: Registration
-  updating: Record<string, boolean>
-  handleUpdate: (id: string, update: Partial<Pick<Registration, 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => Promise<void>
+  hasSchedule: boolean
+  handleUpdate: (id: string, update: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => Promise<void>
+  s: Record<string, React.CSSProperties>
 }) {
-  const maxTables = 12
+  const [busy, setBusy] = useState(false)
 
-  const fields: { key: 'table_forratt' | 'table_varmratt' | 'table_dessert'; label: string }[] = [
+  const update = async (patch: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => {
+    setBusy(true)
+    await handleUpdate(r.id, patch)
+    setBusy(false)
+  }
+
+  const tableFields: { key: 'table_forratt' | 'table_varmratt' | 'table_dessert'; label: string }[] = [
     { key: 'table_forratt',  label: 'F' },
     { key: 'table_varmratt', label: 'V' },
     { key: 'table_dessert',  label: 'D' },
   ]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {fields.map(({ key, label }) => {
-        const current = r[key]
-        return (
-          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', width: 14 }}>{label}</span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-              {Array.from({ length: maxTables }, (_, i) => i + 1).map(n => {
-                const active = current === n
-                const c = tableColor(n)
-                return (
-                  <button key={n}
-                    onClick={() => handleUpdate(r.id, { [key]: active ? null : n })}
-                    disabled={updating[r.id]}
-                    title={`Bord ${n}`}
-                    style={{ width: 24, height: 24, borderRadius: 6, border: `1.5px solid ${active ? c.border : '#E5E7EB'}`, background: active ? c.bg : 'white', color: active ? c.text : '#9CA3AF', fontWeight: 700, fontSize: 11, cursor: 'pointer', opacity: updating[r.id] ? 0.5 : 1 }}>
-                    {n}
-                  </button>
-                )
-              })}
+    <tr style={{ background: 'white' }}>
+      {/* Namn */}
+      <td style={s.td}>
+        {r.is_pair ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 20, height: 20, background: '#EDE9FE', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#7C3AED', flexShrink: 0 }}>1</span>
+              <span style={{ fontWeight: 700, color: '#1A1A1A', fontSize: 13 }}>{r.name}</span>
             </div>
+            {r.partner_name && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ width: 20, height: 20, background: '#FCE7F3', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#EC4899', flexShrink: 0 }}>2</span>
+                <span style={{ fontWeight: 700, color: '#1A1A1A', fontSize: 13 }}>{r.partner_name}</span>
+              </div>
+            )}
           </div>
-        )
-      })}
-    </div>
+        ) : (
+          <span style={{ fontWeight: 700, color: '#1A1A1A', fontSize: 13 }}>{r.name}</span>
+        )}
+      </td>
+
+      {/* Adress */}
+      <td style={{ ...s.td, fontSize: 13, color: '#374151', maxWidth: 160 }}>{r.address}</td>
+
+      {/* Värdskap */}
+      <td style={s.td}>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {COURSES.map(c => {
+            const active = r.course === c.value
+            return (
+              <button key={c.value}
+                onClick={() => update({ course: active ? null : c.value })}
+                disabled={busy}
+                style={{ padding: '5px 11px', borderRadius: 20, border: `1.5px solid ${active ? c.border : '#E5E7EB'}`, background: active ? c.bg : 'white', color: active ? c.color : '#9CA3AF', fontWeight: active ? 700 : 500, fontSize: 12, cursor: 'pointer', opacity: busy ? 0.5 : 1, whiteSpace: 'nowrap' as const }}>
+                {c.label}
+              </button>
+            )
+          })}
+        </div>
+      </td>
+
+      {/* Bordsnummer */}
+      {hasSchedule && (
+        <td style={s.td}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {tableFields.map(({ key, label }) => {
+              const current = r[key]
+              return (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', width: 14 }}>{label}</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(n => {
+                      const active = current === n
+                      const c = tableColor(n)
+                      return (
+                        <button key={n}
+                          onClick={() => update({ [key]: active ? null : n })}
+                          disabled={busy}
+                          style={{ width: 24, height: 24, borderRadius: 6, border: `1.5px solid ${active ? c.border : '#E5E7EB'}`, background: active ? c.bg : 'white', color: active ? c.text : '#9CA3AF', fontWeight: 700, fontSize: 11, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
+                          {n}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </td>
+      )}
+    </tr>
   )
 }
 
-// ─── Schedule Tab ─────────────────────────────────────────────────────────────
+// ─── Schema ───────────────────────────────────────────────────────────────────
 
-function ScheduleTab({ registrations }: { registrations: Registration[] }) {
-  const hasSchedule = registrations.some(r => r.table_forratt)
-
+function ScheduleTab({ registrations, collisions, hasSchedule }: {
+  registrations: Registration[]
+  collisions: Collision[]
+  hasSchedule: boolean
+}) {
   if (!hasSchedule) {
     return (
       <div style={{ textAlign: 'center', padding: '80px 24px', color: '#9CA3AF' }}>
         <p style={{ fontSize: 32, margin: '0 0 12px' }}>📋</p>
         <p style={{ fontWeight: 600, fontSize: 16, color: '#374151', margin: '0 0 8px' }}>Inget schema genererat än</p>
-        <p style={{ fontSize: 14 }}>Tilldela värdskap till alla hushåll och klicka Generera schema.</p>
+        <p style={{ fontSize: 14 }}>Gå till Planering, tilldela värdskap och klicka Generera schema.</p>
       </div>
     )
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
-      {(['forratt', 'varmratt', 'dessert'] as Course[]).map(course => (
-        <CourseBlock key={course} course={course} registrations={registrations} />
-      ))}
-    </div>
+    <>
+      {/* Kollisionsvarningar */}
+      {collisions.length > 0 && (
+        <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
+          <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 14, color: '#92400E' }}>
+            ⚠️ {collisions.length} kollision{collisions.length > 1 ? 'er' : ''} – samma sällskap träffas mer än en gång
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {collisions.map((c, i) => (
+              <span key={i} style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 20, padding: '4px 12px', fontSize: 13, color: '#92400E' }}>
+                {c.nameA} & {c.nameB} ({c.courses.join(', ')})
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
+        {(['forratt', 'varmratt', 'dessert'] as Course[]).map(course => (
+          <CourseBlock key={course} course={course} registrations={registrations} />
+        ))}
+      </div>
+    </>
   )
 }
 
 function CourseBlock({ course, registrations }: { course: Course; registrations: Registration[] }) {
   const tableField = `table_${course}` as 'table_forratt' | 'table_varmratt' | 'table_dessert'
-  const tableNumbers = [...new Set(registrations.map(r => r[tableField]).filter(Boolean))].sort((a, b) => a! - b!) as number[]
-
+  const tableNumbers = [...new Set(registrations.map(r => r[tableField]).filter(n => n != null))].sort((a, b) => a! - b!) as number[]
   const courseInfo = COURSES.find(c => c.value === course)!
 
   return (
@@ -476,20 +535,18 @@ function CourseBlock({ course, registrations }: { course: Course; registrations:
         <h2 style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: courseInfo.color }}>{courseInfo.label}</h2>
         <p style={{ margin: '4px 0 0', fontSize: 13, color: courseInfo.color, opacity: 0.7 }}>{tableNumbers.length} bord · {registrations.length} sällskap</p>
       </div>
-
       <div style={{ padding: '16px' }}>
         {tableNumbers.map(tableNum => {
           const group = registrations.filter(r => r[tableField] === tableNum)
           const host = group.find(r => r.course === course)
           const c = tableColor(tableNum)
-
           return (
             <div key={tableNum} style={{ marginBottom: 14, borderRadius: 12, border: `1.5px solid ${c.border}`, overflow: 'hidden' }}>
               <div style={{ background: c.bg, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 26, height: 26, background: c.text, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white', flexShrink: 0 }}>{tableNum}</span>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.text }}>
-                    {host ? `Hemma hos ${host.name}${host.partner_name ? ' & ' + host.partner_name : ''}` : `Bord ${tableNum}`}
+                    {host ? `Hemma hos ${displayName(host)}` : `Bord ${tableNum}`}
                   </p>
                   {host?.address && <p style={{ margin: 0, fontSize: 12, color: c.text, opacity: 0.75 }}>{host.address}</p>}
                 </div>
@@ -497,14 +554,10 @@ function CourseBlock({ course, registrations }: { course: Course; registrations:
               <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {group.map(r => (
                   <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {r.course === course ? (
-                      <span style={{ fontSize: 11, background: c.bg, border: `1px solid ${c.border}`, color: c.text, borderRadius: 10, padding: '1px 7px', fontWeight: 700, flexShrink: 0 }}>värd</span>
-                    ) : (
-                      <span style={{ fontSize: 11, background: '#F3F4F6', color: '#6B7280', borderRadius: 10, padding: '1px 7px', flexShrink: 0 }}>gäst</span>
-                    )}
-                    <span style={{ fontSize: 14, color: '#1A1A1A', fontWeight: 500 }}>
-                      {r.name}{r.partner_name ? ` & ${r.partner_name}` : ''}
+                    <span style={{ fontSize: 11, background: r.course === course ? c.bg : '#F3F4F6', border: `1px solid ${r.course === course ? c.border : '#E5E7EB'}`, color: r.course === course ? c.text : '#6B7280', borderRadius: 10, padding: '1px 7px', fontWeight: 700, flexShrink: 0 }}>
+                      {r.course === course ? 'värd' : 'gäst'}
                     </span>
+                    <span style={{ fontSize: 14, color: '#1A1A1A', fontWeight: 500 }}>{displayName(r)}</span>
                   </div>
                 ))}
               </div>

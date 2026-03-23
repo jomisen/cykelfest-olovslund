@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { action } = body // 'generate' | 'auto-hosting'
+  const { action } = body // 'generate' | 'auto-hosting' | 'reset'
 
   const supabase = createServerClient()
   const { data, error } = await supabase
@@ -57,6 +57,17 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, generated: schedule.size })
+  }
+
+  if (action === 'reset') {
+    const { error: resetError } = await supabase
+      .from('registrations')
+      .update({ table_forratt: null, table_varmratt: null, table_dessert: null })
+      .neq('id', '00000000-0000-0000-0000-000000000000') // matchar alla rader
+    if (resetError) {
+      return NextResponse.json({ error: 'Kunde inte återställa' }, { status: 500 })
+    }
+    return NextResponse.json({ success: true })
   }
 
   return NextResponse.json({ error: 'Okänd action' }, { status: 400 })
