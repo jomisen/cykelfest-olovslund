@@ -28,12 +28,13 @@ export default function Home() {
               <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', fontWeight: 800, margin: 0, color: text }}>
                 Cykelfest i Olovslund
               </h2>
+              <p style={{ margin: '4px 0 0', fontSize: 15, color: '#a78bfa', fontWeight: 600 }}>12 juni · kl 18.00</p>
             </div>
           </div>
 
           <p style={{ fontSize: '1.05rem', lineHeight: 1.8, color: muted, marginBottom: 20 }}>
             Olovslunds Trädgårdsförening bjuder in till en cykelfest – en social och rörlig middag
-            där vi tillsammans upptäcker varandra och området på ett nytt sätt.
+            där vi tillsammans lär känna varandra och området på ett nytt sätt.
           </p>
           <p style={{ fontSize: '1.05rem', lineHeight: 1.8, color: muted, marginBottom: 20 }}>
             Varje par eller ensam deltagare ansvarar för en rätt – förrätt, varmrätt eller dessert –
