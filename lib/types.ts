@@ -10,8 +10,10 @@ export interface Registration {
   partner_email: string | null
   partner_phone: string | null
   notes: string | null
-  group_number: number | null
   course: 'forratt' | 'varmratt' | 'dessert' | null
+  table_forratt: number | null
+  table_varmratt: number | null
+  table_dessert: number | null
 }
 
 export type Course = 'forratt' | 'varmratt' | 'dessert'
