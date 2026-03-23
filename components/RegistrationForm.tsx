@@ -362,7 +362,7 @@ export default function RegistrationForm() {
             </svg>
             Skickar…
           </>
-        ) : '🎉 Anmäl oss'}
+        ) : isPair ? '🎉 Anmäl oss' : '🎉 Anmäl mig'}
       </button>
     </form>
   )
