@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getDb } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
-import { createServerClient } from '@/lib/supabase'
 
 export async function PATCH(
   request: NextRequest,
@@ -16,24 +16,30 @@ export async function PATCH(
   const body = await request.json()
 
   const allowedFields = ['course', 'table_forratt', 'table_varmratt', 'table_dessert']
-  const update: Record<string, unknown> = {}
-  for (const field of allowedFields) {
-    if (field in body) update[field] = body[field]
-  }
-
-  if (Object.keys(update).length === 0) {
+  const hasAny = allowedFields.some(f => f in body)
+  if (!hasAny) {
     return NextResponse.json({ error: 'Inga giltiga fält att uppdatera' }, { status: 400 })
   }
 
-  const supabase = createServerClient()
-  const { error } = await supabase.from('registrations').update(update).eq('id', id)
-
-  if (error) {
-    console.error('Supabase update error:', error)
+  try {
+    const sql = getDb()
+    if ('course' in body && allowedFields.includes('course')) {
+      await sql`UPDATE registrations SET course = ${body.course} WHERE id = ${id}`
+    }
+    if ('table_forratt' in body && allowedFields.includes('table_forratt')) {
+      await sql`UPDATE registrations SET table_forratt = ${body.table_forratt} WHERE id = ${id}`
+    }
+    if ('table_varmratt' in body && allowedFields.includes('table_varmratt')) {
+      await sql`UPDATE registrations SET table_varmratt = ${body.table_varmratt} WHERE id = ${id}`
+    }
+    if ('table_dessert' in body && allowedFields.includes('table_dessert')) {
+      await sql`UPDATE registrations SET table_dessert = ${body.table_dessert} WHERE id = ${id}`
+    }
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('Update error:', err)
     return NextResponse.json({ error: 'Kunde inte uppdatera' }, { status: 500 })
   }
-
-  return NextResponse.json({ success: true })
 }
 
 export async function DELETE(
@@ -46,13 +52,12 @@ export async function DELETE(
   }
 
   const { id } = await params
-  const supabase = createServerClient()
-  const { error } = await supabase.from('registrations').delete().eq('id', id)
-
-  if (error) {
-    console.error('Supabase delete error:', error)
+  try {
+    const sql = getDb()
+    await sql`DELETE FROM registrations WHERE id = ${id}`
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('Delete error:', err)
     return NextResponse.json({ error: 'Kunde inte ta bort' }, { status: 500 })
   }
-
-  return NextResponse.json({ success: true })
 }

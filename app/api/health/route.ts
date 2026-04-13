@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server'
+import { getDb } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
-import { createServerClient } from '@/lib/supabase'
 
 export async function GET() {
-  const supabase = createServerClient()
-  const { error } = await supabase
-    .from('registrations')
-    .select('id')
-    .limit(1)
-
-  if (error) {
+  try {
+    const sql = getDb()
+    await sql`SELECT 1`
+    return NextResponse.json({ ok: true })
+  } catch {
     return NextResponse.json({ ok: false }, { status: 500 })
   }
-
-  return NextResponse.json({ ok: true })
 }

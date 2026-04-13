@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { getDb } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
-import { z } from 'zod'
-import { createServerClient } from '@/lib/supabase'
 
 const schema = z
   .object({
@@ -38,27 +38,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Bygg insert-objektet utan partner_phone (kolumnen kanske saknas)
-    // Lägg istället till partner_phone i notes-fältet
     const { partner_phone, notes, ...rest } = parsed.data
     const combinedNotes = [
       partner_phone ? `Partner telefon: ${partner_phone}` : null,
       notes || null,
-    ].filter(Boolean).join('\n') || undefined
+    ].filter(Boolean).join('\n') || null
 
-    const supabase = createServerClient()
-    const { data, error } = await supabase
-      .from('registrations')
-      .insert([{ ...rest, notes: combinedNotes }])
-      .select('id')
-      .single()
+    const sql = getDb()
+    const result = await sql`
+      INSERT INTO registrations (name, email, phone, address, is_pair, partner_name, partner_email, notes)
+      VALUES (${rest.name}, ${rest.email}, ${rest.phone}, ${rest.address}, ${rest.is_pair}, ${rest.partner_name ?? null}, ${rest.partner_email ?? null}, ${combinedNotes})
+      RETURNING id
+    `
 
-    if (error) {
-      console.error('Supabase insert error:', error)
-      return NextResponse.json({ error: 'Kunde inte spara anmälan' }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, id: data.id }, { status: 201 })
+    return NextResponse.json({ success: true, id: result[0].id }, { status: 201 })
   } catch (err) {
     console.error('Register error:', err)
     return NextResponse.json({ error: 'Något gick fel' }, { status: 500 })

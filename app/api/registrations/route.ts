@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getDb } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
-import { createServerClient } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   const pin = request.headers.get('x-admin-pin')
@@ -9,16 +9,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Obehörig' }, { status: 401 })
   }
 
-  const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from('registrations')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    console.error('Supabase fetch error:', error)
+  try {
+    const sql = getDb()
+    const data = await sql`SELECT * FROM registrations ORDER BY created_at DESC`
+    return NextResponse.json({ registrations: data })
+  } catch (err) {
+    console.error('Fetch error:', err)
     return NextResponse.json({ error: 'Kunde inte hämta anmälningar' }, { status: 500 })
   }
-
-  return NextResponse.json({ registrations: data })
 }
