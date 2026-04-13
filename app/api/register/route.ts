@@ -7,12 +7,12 @@ export const dynamic = 'force-dynamic'
 const schema = z
   .object({
     name: z.string().min(2, 'Namn måste vara minst 2 tecken'),
-    email: z.string().email('Ange en giltig e-postadress'),
+    email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Ange en giltig e-postadress'),
     phone: z.string().min(5, 'Ange ett giltigt telefonnummer'),
     address: z.string().min(3, 'Ange din adress'),
     is_pair: z.boolean(),
     partner_name: z.string().optional(),
-    partner_email: z.string().email('Ange en giltig e-postadress för partner').optional().or(z.literal('')),
+    partner_email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Ange en giltig e-postadress för partner').optional().or(z.literal('')),
     partner_phone: z.string().optional(),
     notes: z.string().optional(),
   })
