@@ -223,7 +223,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
             s={s}
           />
         ) : (
-          <ScheduleTab registrations={registrations} collisions={collisions} hasSchedule={hasSchedule} />
+          <ScheduleTab registrations={registrations} collisions={collisions} hasSchedule={hasSchedule} handleUpdate={handleUpdate} />
         )}
       </div>
     </div>
@@ -394,12 +394,11 @@ function PlanningTab({ registrations, allHosted, hasSchedule, anyPlanning, gener
                   <th style={s.th}>Sällskap</th>
                   <th style={s.th}>Adress</th>
                   <th style={s.th}>Ansvarar för</th>
-                  {hasSchedule && <th style={s.th}>Bord (F / V / D)</th>}
                 </tr>
               </thead>
               <tbody>
                 {registrations.map(r => (
-                  <PlanningRow key={r.id} r={r} hasSchedule={hasSchedule} handleUpdate={handleUpdate} s={s} />
+                  <PlanningRow key={r.id} r={r} handleUpdate={handleUpdate} s={s} />
                 ))}
               </tbody>
             </table>
@@ -410,9 +409,8 @@ function PlanningTab({ registrations, allHosted, hasSchedule, anyPlanning, gener
   )
 }
 
-function PlanningRow({ r, hasSchedule, handleUpdate, s }: {
+function PlanningRow({ r, handleUpdate, s }: {
   r: Registration
-  hasSchedule: boolean
   handleUpdate: (id: string, update: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => Promise<void>
   s: Record<string, React.CSSProperties>
 }) {
@@ -423,12 +421,6 @@ function PlanningRow({ r, hasSchedule, handleUpdate, s }: {
     await handleUpdate(r.id, patch)
     setBusy(false)
   }
-
-  const tableFields: { key: 'table_forratt' | 'table_varmratt' | 'table_dessert'; label: string }[] = [
-    { key: 'table_forratt',  label: 'F' },
-    { key: 'table_varmratt', label: 'V' },
-    { key: 'table_dessert',  label: 'D' },
-  ]
 
   return (
     <tr style={{ background: 'white' }}>
@@ -472,45 +464,17 @@ function PlanningRow({ r, hasSchedule, handleUpdate, s }: {
         </div>
       </td>
 
-      {/* Bordsnummer */}
-      {hasSchedule && (
-        <td style={s.td}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {tableFields.map(({ key, label }) => {
-              const current = r[key]
-              return (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', width: 14 }}>{label}</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(n => {
-                      const active = current === n
-                      const c = tableColor(n)
-                      return (
-                        <button key={n}
-                          onClick={() => update({ [key]: active ? null : n })}
-                          disabled={busy}
-                          style={{ width: 24, height: 24, borderRadius: 6, border: `1.5px solid ${active ? c.border : '#E5E7EB'}`, background: active ? c.bg : 'white', color: active ? c.text : '#9CA3AF', fontWeight: 700, fontSize: 11, cursor: 'pointer', opacity: busy ? 0.5 : 1 }}>
-                          {n}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </td>
-      )}
     </tr>
   )
 }
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
-function ScheduleTab({ registrations, collisions, hasSchedule }: {
+function ScheduleTab({ registrations, collisions, hasSchedule, handleUpdate }: {
   registrations: Registration[]
   collisions: Collision[]
   hasSchedule: boolean
+  handleUpdate: (id: string, update: Partial<Pick<Registration, 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => Promise<void>
 }) {
   if (!hasSchedule) {
     return (
@@ -542,14 +506,18 @@ function ScheduleTab({ registrations, collisions, hasSchedule }: {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
         {(['forratt', 'varmratt', 'dessert'] as Course[]).map(course => (
-          <CourseBlock key={course} course={course} registrations={registrations} />
+          <CourseBlock key={course} course={course} registrations={registrations} handleUpdate={handleUpdate} />
         ))}
       </div>
     </>
   )
 }
 
-function CourseBlock({ course, registrations }: { course: Course; registrations: Registration[] }) {
+function CourseBlock({ course, registrations, handleUpdate }: {
+  course: Course
+  registrations: Registration[]
+  handleUpdate: (id: string, update: Partial<Pick<Registration, 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => Promise<void>
+}) {
   const tableField = `table_${course}` as 'table_forratt' | 'table_varmratt' | 'table_dessert'
   const tableNumbers = [...new Set(registrations.map(r => r[tableField]).filter(n => n != null))].sort((a, b) => a! - b!) as number[]
   const courseInfo = COURSES.find(c => c.value === course)!
@@ -578,14 +546,30 @@ function CourseBlock({ course, registrations }: { course: Course; registrations:
                 </div>
               </div>
               <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {group.map(r => (
-                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, background: r.course === course ? c.bg : '#F3F4F6', border: `1px solid ${r.course === course ? c.border : '#E5E7EB'}`, color: r.course === course ? c.text : '#6B7280', borderRadius: 10, padding: '1px 7px', fontWeight: 700, flexShrink: 0 }}>
-                      {r.course === course ? 'värd' : 'gäst'}
-                    </span>
-                    <span style={{ fontSize: 14, color: '#1A1A1A', fontWeight: 500 }}>{displayName(r)}</span>
-                  </div>
-                ))}
+                {group.map(r => {
+                  const isHost = r.course === course
+                  return (
+                    <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11, background: isHost ? c.bg : '#F3F4F6', border: `1px solid ${isHost ? c.border : '#E5E7EB'}`, color: isHost ? c.text : '#6B7280', borderRadius: 10, padding: '1px 7px', fontWeight: 700, flexShrink: 0 }}>
+                          {isHost ? 'värd' : 'gäst'}
+                        </span>
+                        <span style={{ fontSize: 14, color: '#1A1A1A', fontWeight: 500 }}>{displayName(r)}</span>
+                      </div>
+                      {!isHost && (
+                        <select
+                          value={r[tableField] ?? ''}
+                          onChange={e => handleUpdate(r.id, { [tableField]: Number(e.target.value) })}
+                          style={{ fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid #D1D5DB', background: 'white', color: '#374151', cursor: 'pointer' }}
+                        >
+                          {tableNumbers.map(n => (
+                            <option key={n} value={n}>Bord {n}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )
