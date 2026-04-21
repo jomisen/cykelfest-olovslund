@@ -8,18 +8,25 @@ function mod(n: number, m: number): number {
  * Tilldelar värdskap jämnt och slumpmässigt.
  * Returnerar en map: registrationId → course
  */
-export function autoAssignHosting(registrations: Registration[]): Map<string, Course> {
+export function autoAssignHosting(registrations: Registration[]): Map<string, Course | null> {
   const shuffled = [...registrations].sort(() => Math.random() - 0.5)
   const n = shuffled.length
+  // Om N ≡ 1 (mod 3): ett hushåll blir flytande gäst (inget värdskap)
+  const floating = n % 3 === 1 ? 1 : 0
+  const result = new Map<string, Course | null>()
+  for (let i = 0; i < floating; i++) {
+    result.set(shuffled[i].id, null)
+  }
+  const hosts = shuffled.slice(floating)
+  const hN = hosts.length
   const courses: Course[] = ['forratt', 'varmratt', 'dessert']
-  const base = Math.floor(n / 3)
-  const extra = n % 3
-  const result = new Map<string, Course>()
+  const base = Math.floor(hN / 3)
+  const extra = hN % 3
   let idx = 0
   for (let c = 0; c < 3; c++) {
     const count = base + (c < extra ? 1 : 0)
     for (let i = 0; i < count; i++) {
-      result.set(shuffled[idx++].id, courses[c])
+      result.set(hosts[idx++].id, courses[c])
     }
   }
   return result
@@ -50,6 +57,7 @@ export function generateSchedule(
     throw new Error('Alla tre rätter måste ha minst ett värd-hushåll')
   }
 
+  const floating = registrations.filter(r => r.course === null)
   const kA = A.length, kB = B.length, kC = C.length
   const result = new Map<string, { table_forratt: number; table_varmratt: number; table_dessert: number }>()
 
@@ -78,6 +86,11 @@ export function generateSchedule(
       table_varmratt: mod(j - 1 + kA, kB) + 1,
       table_dessert:  j + 1,
     })
+  }
+
+  // Flytande gäster (N ≡ 1 mod 3): tilldelas alltid till bord 1 alla kurser
+  for (const f of floating) {
+    result.set(f.id, { table_forratt: 1, table_varmratt: 1, table_dessert: 1 })
   }
 
   return result

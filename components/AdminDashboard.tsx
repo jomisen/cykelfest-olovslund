@@ -104,9 +104,10 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
 
   const handleGenerateAction = async (action: 'auto-hosting' | 'generate' | 'reset' | 'reset-all') => {
     if (action === 'generate') {
+      const allowedFloating = registrations.length % 3 === 1 ? 1 : 0
       const unassigned = registrations.filter(r => !r.course).length
-      if (unassigned > 0) {
-        alert(`${unassigned} hushåll saknar värdskapsrätt. Tilldela alla först.`)
+      if (unassigned > allowedFloating) {
+        alert(`${unassigned - allowedFloating} hushåll saknar värdskapsrätt. Tilldela alla först.`)
         return
       }
     }
@@ -142,7 +143,8 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
     scheduled: registrations.filter(r => r.table_forratt != null).length,
   }
 
-  const allHosted = stats.withHost === stats.total && stats.total > 0
+  const allowedFloating = stats.total % 3 === 1 ? 1 : 0
+  const allHosted = stats.withHost >= stats.total - allowedFloating && stats.total > 0
   const hasSchedule = stats.scheduled > 0
   const anyPlanning = stats.withHost > 0
 
@@ -367,9 +369,17 @@ function PlanningTab({ registrations, allHosted, hasSchedule, anyPlanning, gener
           </button>
         )}
 
-        {!allHosted && registrations.length > 0 && (
-          <span style={{ fontSize: 13, color: '#EF4444' }}>{unassigned} hushåll saknar värdskap</span>
-        )}
+        {(() => {
+          const allowedF = registrations.length % 3 === 1 ? 1 : 0
+          const unassignedCount = registrations.filter(r => !r.course).length
+          const missing = unassignedCount - allowedF
+          return (
+            <>
+              {missing > 0 && <span style={{ fontSize: 13, color: '#EF4444' }}>{missing} hushåll saknar värdskap</span>}
+              {allowedF === 1 && unassignedCount >= 1 && <span style={{ fontSize: 13, color: '#9CA3AF' }}>1 hushåll är flytande gäst</span>}
+            </>
+          )
+        })()}
       </div>
 
       {/* Tabell */}
