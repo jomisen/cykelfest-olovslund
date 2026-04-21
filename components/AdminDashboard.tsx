@@ -527,7 +527,7 @@ function CourseBlock({ course, registrations, handleUpdate }: {
       <div style={{ background: courseInfo.bg, borderBottom: `2px solid ${courseInfo.border}`, padding: '16px 20px' }}>
         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: courseInfo.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Kurs</p>
         <h2 style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: courseInfo.color }}>{courseInfo.label}</h2>
-        <p style={{ margin: '4px 0 0', fontSize: 13, color: courseInfo.color, opacity: 0.7 }}>{tableNumbers.length} bord · {registrations.length} sällskap</p>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: courseInfo.color, opacity: 0.7 }}>{tableNumbers.length} grupper · {registrations.length} sällskap</p>
       </div>
       <div style={{ padding: '16px' }}>
         {tableNumbers.map(tableNum => {
@@ -540,7 +540,7 @@ function CourseBlock({ course, registrations, handleUpdate }: {
                 <span style={{ width: 26, height: 26, background: c.text, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white', flexShrink: 0 }}>{tableNum}</span>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: c.text }}>
-                    {host ? `Hemma hos ${displayName(host)}` : `Bord ${tableNum}`}
+                    {host ? `Hemma hos ${displayName(host)}` : `${courseInfo.label} ${tableNum}`}
                   </p>
                   {host?.address && <p style={{ margin: 0, fontSize: 12, color: c.text, opacity: 0.75 }}>{host.address}</p>}
                 </div>
@@ -563,7 +563,7 @@ function CourseBlock({ course, registrations, handleUpdate }: {
                           style={{ fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid #D1D5DB', background: 'white', color: '#374151', cursor: 'pointer' }}
                         >
                           {tableNumbers.map(n => (
-                            <option key={n} value={n}>Bord {n}</option>
+                            <option key={n} value={n}>{courseInfo.label} {n}</option>
                           ))}
                         </select>
                       )}
