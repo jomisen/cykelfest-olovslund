@@ -102,7 +102,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
     }
   }, [pin, registrations])
 
-  const handleGenerateAction = async (action: 'auto-hosting' | 'generate' | 'reset') => {
+  const handleGenerateAction = async (action: 'auto-hosting' | 'generate' | 'reset' | 'reset-all') => {
     if (action === 'generate') {
       const unassigned = registrations.filter(r => !r.course).length
       if (unassigned > 0) {
@@ -112,6 +112,9 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
     }
     if (action === 'reset') {
       if (!confirm('Återställ alla bordstilldelningar? Värdskapen behålls.')) return
+    }
+    if (action === 'reset-all') {
+      if (!confirm('Återställ hela planeringen? Både värdskap och bordsnummer tas bort.')) return
     }
     setGenerating(true)
     try {
@@ -141,6 +144,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
 
   const allHosted = stats.withHost === stats.total && stats.total > 0
   const hasSchedule = stats.scheduled > 0
+  const anyPlanning = stats.withHost > 0
 
   const s: Record<string, React.CSSProperties> = {
     page:   { minHeight: '100vh', background: '#F8F7FF', fontFamily: 'system-ui, sans-serif', color: '#1A1A1A' },
@@ -210,6 +214,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
             registrations={registrations}
             allHosted={allHosted}
             hasSchedule={hasSchedule}
+            anyPlanning={anyPlanning}
             generating={generating}
             handleUpdate={handleUpdate}
             handleGenerateAction={handleGenerateAction}
@@ -309,13 +314,14 @@ function RegistrationsTab({ registrations, handleDelete, s }: {
 
 // ─── Planering ────────────────────────────────────────────────────────────────
 
-function PlanningTab({ registrations, allHosted, hasSchedule, generating, handleUpdate, handleGenerateAction, s }: {
+function PlanningTab({ registrations, allHosted, hasSchedule, anyPlanning, generating, handleUpdate, handleGenerateAction, s }: {
   registrations: Registration[]
   allHosted: boolean
   hasSchedule: boolean
+  anyPlanning: boolean
   generating: boolean
   handleUpdate: (id: string, update: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => Promise<void>
-  handleGenerateAction: (action: 'auto-hosting' | 'generate' | 'reset') => Promise<void>
+  handleGenerateAction: (action: 'auto-hosting' | 'generate' | 'reset' | 'reset-all') => Promise<void>
   s: Record<string, React.CSSProperties>
 }) {
   const unassigned = registrations.filter(r => !r.course).length
@@ -348,6 +354,16 @@ function PlanningTab({ registrations, allHosted, hasSchedule, generating, handle
             style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#DC2626', opacity: generating ? 0.6 : 1 }}
           >
             ↺ Återställ schema
+          </button>
+        )}
+
+        {anyPlanning && (
+          <button
+            onClick={() => handleGenerateAction('reset-all')}
+            disabled={generating}
+            style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 10, padding: '8px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#DC2626', opacity: generating ? 0.6 : 1 }}
+          >
+            ↺ Återställ allt
           </button>
         )}
 

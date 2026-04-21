@@ -57,6 +57,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
+    if (action === 'reset-all') {
+      await sql`UPDATE registrations SET course = NULL, table_forratt = NULL, table_varmratt = NULL, table_dessert = NULL`
+      return NextResponse.json({ success: true })
+    }
+
     return NextResponse.json({ error: 'Okänd action' }, { status: 400 })
   } catch (err) {
     console.error('Generate schedule error:', err)
