@@ -63,6 +63,7 @@ export default function Home() {
                 { icon: '👫', text: 'Du kan anmäla dig som par eller ensam – vi sätter ihop grupper' },
                 { icon: '🍽️', text: 'Du ansvarar för en av kvällens rätter' },
                 { icon: '📍', text: 'Exakta tider och adresser skickas ut i förväg' },
+                { icon: '✉️', text: <>Frågor? Hör av dig till <a href="mailto:cykelfestolovslund@gmail.com" style={{ color: '#a78bfa' }}>cykelfestolovslund@gmail.com</a></> },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                   <span style={{
