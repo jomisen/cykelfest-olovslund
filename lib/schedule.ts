@@ -71,11 +71,11 @@ export function generateSchedule(
     })
   }
 
-  // C[j]: gäst vid förrätt hos A[j], gäst vid varmrätt hos B[j-1], värd vid dessert bord j
+  // C[j]: gäst vid förrätt (staggerad så alla A-bord täcks), gäst vid varmrätt hos B, värd vid dessert bord j
   for (let j = 0; j < kC; j++) {
     result.set(C[j].id, {
-      table_forratt:  j + 1,
-      table_varmratt: mod(j - 1, kB) + 1,
+      table_forratt:  mod(j + kB, kA) + 1,
+      table_varmratt: mod(j - 1 + kA, kB) + 1,
       table_dessert:  j + 1,
     })
   }
