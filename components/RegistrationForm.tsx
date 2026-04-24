@@ -107,7 +107,7 @@ export default function RegistrationForm() {
       if (!response.ok) throw new Error(result.error || 'Något gick fel')
       setSubmittedName(name.trim())
       setIsSuccess(true)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      document.getElementById('anmalan')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Något gick fel. Försök igen.')
     } finally {
