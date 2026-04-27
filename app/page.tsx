@@ -3,7 +3,6 @@ import RegistrationForm from '@/components/RegistrationForm'
 
 const muted = 'rgba(240,235,255,0.6)'
 const text = '#f0ebff'
-const textDark = '#c4b5fd'
 
 export default function Home() {
   return (
