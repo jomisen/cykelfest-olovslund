@@ -11,7 +11,7 @@ export default function Home() {
 
       {/* Om cykelfesten */}
       <section style={{ maxWidth: 800, margin: '0 auto', padding: '80px 24px 0' }}>
-        <div className="card animate-fade-in" style={{ padding: '48px' }}>
+        <div className="card animate-fade-in" style={{ padding: 'clamp(24px, 6vw, 48px)' }}>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
             <div style={{
@@ -73,7 +73,7 @@ export default function Home() {
                     justifyContent: 'center', fontSize: 18, flexShrink: 0,
                     border: '1px solid rgba(255,255,255,0.1)'
                   }}>{item.icon}</span>
-                  <p style={{ margin: 0, paddingTop: 8, color: muted, lineHeight: 1.5 }}>{item.text}</p>
+                  <p style={{ margin: 0, paddingTop: 8, color: muted, lineHeight: 1.5, wordBreak: 'break-word', minWidth: 0 }}>{item.text}</p>
                 </div>
               ))}
             </div>
