@@ -58,6 +58,7 @@ export default function Home() {
             </h3>
             <div style={{ display: 'grid', gap: 16 }}>
               {[
+                { icon: '🏡', text: 'Endast för medlemmar i Olovslunds Trädgårdsförening' },
                 { icon: '🔞', text: 'Endast för vuxna' },
                 { icon: '👫', text: 'Du kan anmäla dig som par eller ensam – vi sätter ihop grupper' },
                 { icon: '🍽️', text: 'Du ansvarar för en av kvällens rätter' },
