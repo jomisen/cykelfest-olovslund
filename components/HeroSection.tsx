@@ -34,7 +34,7 @@ export default function HeroSection() {
       {/* Textinnehåll */}
       <div className="animate-fade-in-up" style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        padding: '0 24px 64px',
+        padding: '0 clamp(16px, 4vw, 24px) clamp(48px, 8vw, 64px)',
         maxWidth: 900,
         margin: '0 auto'
       }}>

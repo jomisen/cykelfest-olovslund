@@ -10,10 +10,10 @@ export default function Home() {
       <HeroSection />
 
       {/* Om cykelfesten */}
-      <section style={{ maxWidth: 800, margin: '0 auto', padding: '80px 24px 0' }}>
-        <div className="card animate-fade-in" style={{ padding: 'clamp(24px, 6vw, 48px)' }}>
+      <section style={{ maxWidth: 800, margin: '0 auto', padding: 'clamp(40px, 8vw, 80px) clamp(16px, 4vw, 24px) 0' }}>
+        <div className="card animate-fade-in" style={{ padding: 'clamp(20px, 5vw, 48px)' }}>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
             <div style={{
               width: 48, height: 48,
               background: 'linear-gradient(135deg, #7C3AED, #EC4899)',
@@ -24,25 +24,25 @@ export default function Home() {
               <p style={{ fontSize: 13, fontWeight: 600, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
                 Om evenemanget
               </p>
-              <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', fontWeight: 800, margin: 0, color: text }}>
+              <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, margin: 0, color: text }}>
                 Cykelfest i Olovslund
               </h2>
               <p style={{ margin: '4px 0 0', fontSize: 15, color: '#a78bfa', fontWeight: 600 }}>12 juni · kl 18.00</p>
             </div>
           </div>
 
-          <p style={{ fontSize: '1.05rem', lineHeight: 1.8, color: muted, marginBottom: 20 }}>
+          <p style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)', lineHeight: 1.8, color: muted, marginBottom: 20 }}>
             Olovslunds trädgårdsstadsförening bjuder in till en cykelfest – en social och rörlig middag
             där vi tillsammans lär känna varandra och området på ett nytt sätt.
           </p>
-          <p style={{ fontSize: '1.05rem', lineHeight: 1.8, color: muted, marginBottom: 20 }}>
+          <p style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)', lineHeight: 1.8, color: muted, marginBottom: 20 }}>
             Varje anmält hushåll ansvarar för en rätt – förrätt, varmrätt eller dessert –
             som serveras hemma hos er. Under kvällen rör sig alla mellan varandras hem: ni äter
             förrätten hos ett hushåll, varmrätten hos ett annat och desserten hos ett tredje.
             Det innebär att ni träffar nya människor vid varje stopp. Ni får i förväg veta
             var ni ska vara och när.
           </p>
-          <p style={{ fontSize: '1.05rem', lineHeight: 1.8, color: muted, marginBottom: 32 }}>
+          <p style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.05rem)', lineHeight: 1.8, color: muted, marginBottom: 28 }}>
             Förflyttning sker till fots eller med cykel – välj det som passar er bäst. Kvällen
             avslutas gemensamt i parken där vi samlas för en drink och avrundar tillsammans.
           </p>
@@ -50,7 +50,7 @@ export default function Home() {
           {/* Bra att veta */}
           <div style={{
             background: 'rgba(124,58,237,0.12)',
-            borderRadius: 18, padding: 32,
+            borderRadius: 18, padding: 'clamp(18px, 4vw, 32px)',
             border: '1px solid rgba(124,58,237,0.25)'
           }}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 20, color: text }}>
@@ -67,20 +67,20 @@ export default function Home() {
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                   <span style={{
-                    width: 38, height: 38,
+                    width: 36, height: 36,
                     background: 'rgba(255,255,255,0.08)',
                     borderRadius: 10, display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: 18, flexShrink: 0,
+                    justifyContent: 'center', fontSize: 17, flexShrink: 0,
                     border: '1px solid rgba(255,255,255,0.1)'
                   }}>{item.icon}</span>
-                  <p style={{ margin: 0, paddingTop: 8, color: muted, lineHeight: 1.5, wordBreak: 'break-word', minWidth: 0 }}>{item.text}</p>
+                  <p style={{ margin: 0, paddingTop: 7, color: muted, lineHeight: 1.5, wordBreak: 'break-word', minWidth: 0 }}>{item.text}</p>
                 </div>
               ))}
             </div>
           </div>
 
           <div style={{
-            marginTop: 32, borderLeft: '3px solid #7C3AED',
+            marginTop: 28, borderLeft: '3px solid #7C3AED',
             paddingLeft: 20, color: muted, fontStyle: 'italic', lineHeight: 1.7
           }}>
             Det här är ett enkelt sätt att träffa fler i området, dela en middag och få en rolig kväll tillsammans.
@@ -89,23 +89,23 @@ export default function Home() {
       </section>
 
       {/* Anmälningssektion */}
-      <section id="anmalan" style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px 100px' }}>
+      <section id="anmalan" style={{ maxWidth: 800, margin: '0 auto', padding: 'clamp(24px, 5vw, 40px) clamp(16px, 4vw, 24px) clamp(60px, 10vw, 100px)' }}>
         <div className="card" style={{ overflow: 'hidden' }}>
           <div style={{
             background: 'linear-gradient(135deg, #7C3AED, #EC4899)',
-            padding: '36px 48px 32px'
+            padding: 'clamp(24px, 5vw, 36px) clamp(20px, 5vw, 48px) clamp(20px, 4vw, 32px)'
           }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>
               Anmälan
             </p>
-            <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', fontWeight: 800, color: 'white', margin: 0 }}>
+            <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, color: 'white', margin: 0 }}>
               Välkommen att anmäla dig!
             </h2>
-            <p style={{ color: 'rgba(255,255,255,0.8)', marginTop: 8, marginBottom: 0 }}>
+            <p style={{ color: 'rgba(255,255,255,0.8)', marginTop: 8, marginBottom: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
               Vi återkommer med mer detaljer om tider och platser.
             </p>
           </div>
-          <div style={{ padding: '40px 48px' }}>
+          <div style={{ padding: 'clamp(20px, 5vw, 40px) clamp(16px, 4vw, 48px)' }}>
             <RegistrationForm />
           </div>
         </div>

@@ -134,7 +134,7 @@ export default function RegistrationForm() {
 
   const personCardStyle = () => ({
     background: 'rgba(255,255,255,0.05)',
-    borderRadius: 16, padding: 24,
+    borderRadius: 16, padding: 'clamp(16px, 4vw, 24px)',
     border: '1px solid rgba(255,255,255,0.13)',
     display: 'flex', flexDirection: 'column' as const, gap: 18,
   })
