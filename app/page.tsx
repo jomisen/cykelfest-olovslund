@@ -32,7 +32,7 @@ export default function Home() {
           </div>
 
           <p style={{ fontSize: '1.05rem', lineHeight: 1.8, color: muted, marginBottom: 20 }}>
-            Olovslunds Trädgårdsförening bjuder in till en cykelfest – en social och rörlig middag
+            Olovslunds trädgårdsstadsförening bjuder in till en cykelfest – en social och rörlig middag
             där vi tillsammans lär känna varandra och området på ett nytt sätt.
           </p>
           <p style={{ fontSize: '1.05rem', lineHeight: 1.8, color: muted, marginBottom: 20 }}>
@@ -58,7 +58,7 @@ export default function Home() {
             </h3>
             <div style={{ display: 'grid', gap: 16 }}>
               {[
-                { icon: '🏡', text: 'Endast för medlemmar i Olovslunds Trädgårdsförening' },
+                { icon: '🏡', text: 'Endast för medlemmar i Olovslunds trädgårdsstadsförening' },
                 { icon: '🔞', text: 'Endast för vuxna' },
                 { icon: '👫', text: 'Du kan anmäla dig som par eller ensam – vi sätter ihop grupper' },
                 { icon: '🍽️', text: 'Du ansvarar för en av kvällens rätter' },
@@ -116,7 +116,7 @@ export default function Home() {
         borderTop: '1px solid rgba(255,255,255,0.07)',
         color: 'rgba(240,235,255,0.3)', fontSize: 14
       }}>
-        © Olovslunds Trädgårdsförening
+        © Olovslunds trädgårdsstadsförening
       </footer>
     </main>
   )

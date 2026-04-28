@@ -7,7 +7,7 @@ export default function HeroSection() {
       {/* Hero-bild */}
       <Image
         src="/olovslund.png"
-        alt="Olovslunds trädgårdsförening"
+        alt="Olovslunds trädgårdsstadsförening"
         fill
         style={{ objectFit: 'cover', objectPosition: 'center' }}
         priority
@@ -47,7 +47,7 @@ export default function HeroSection() {
           marginBottom: 20
         }}>
           <span style={{ fontSize: 14, color: 'white', fontWeight: 600, letterSpacing: '0.05em' }}>
-            🌿 Olovslunds Trädgårdsförening
+            🌿 Olovslunds trädgårdsstadsförening
           </span>
         </div>
 

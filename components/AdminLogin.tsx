@@ -37,7 +37,7 @@ export default function AdminLogin({ onLogin }: Props) {
 
         <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1A1A1A', margin: '0 0 6px' }}>Admin</h1>
         <p style={{ color: '#9CA3AF', marginBottom: 32, fontSize: 14 }}>
-          Cykelfest – Olovslunds Trädgårdsförening
+          Cykelfest – Olovslunds trädgårdsstadsförening
         </p>
 
         <form onSubmit={handleSubmit}>

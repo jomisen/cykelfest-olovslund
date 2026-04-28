@@ -9,7 +9,7 @@ const geist = Geist({
 })
 
 export const metadata: Metadata = {
-  title: 'Cykelfest – Olovslunds Trädgårdsförening',
+  title: 'Cykelfest – Olovslunds trädgårdsstadsförening',
   description: 'Anmäl dig till Cykelfesten i Olovslund – en social och rörlig middag för grannar.',
 }
 
