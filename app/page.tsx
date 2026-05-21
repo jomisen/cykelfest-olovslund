@@ -1,10 +1,33 @@
 import HeroSection from '@/components/HeroSection'
 import RegistrationForm from '@/components/RegistrationForm'
+import { getDb } from '@/lib/db'
 
 const muted = 'rgba(240,235,255,0.6)'
 const text = '#f0ebff'
 
-export default function Home() {
+async function getRegistrationsOpen(): Promise<boolean> {
+  try {
+    const sql = getDb()
+    await sql`
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `
+    await sql`
+      INSERT INTO settings (key, value) VALUES ('registrations_open', 'true')
+      ON CONFLICT (key) DO NOTHING
+    `
+    const rows = await sql`SELECT value FROM settings WHERE key = 'registrations_open'`
+    return rows[0]?.value !== 'false'
+  } catch {
+    return true
+  }
+}
+
+export default async function Home() {
+  const registrationsOpen = await getRegistrationsOpen()
+
   return (
     <main id="main-content" className="page-bg">
       <HeroSection />
@@ -91,23 +114,50 @@ export default function Home() {
       {/* Anmälningssektion */}
       <section id="anmalan" style={{ maxWidth: 800, margin: '0 auto', padding: 'clamp(24px, 5vw, 40px) clamp(16px, 4vw, 24px) clamp(60px, 10vw, 100px)' }}>
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #7C3AED, #EC4899)',
-            padding: 'clamp(24px, 5vw, 36px) clamp(20px, 5vw, 48px) clamp(20px, 4vw, 32px)'
-          }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>
-              Anmälan
-            </p>
-            <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, color: 'white', margin: 0 }}>
-              Välkommen att anmäla dig!
-            </h2>
-            <p style={{ color: 'rgba(255,255,255,0.8)', marginTop: 8, marginBottom: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
-              Vi återkommer med mer detaljer om tider och platser.
-            </p>
-          </div>
-          <div style={{ padding: 'clamp(20px, 5vw, 40px) clamp(16px, 4vw, 48px)' }}>
-            <RegistrationForm />
-          </div>
+          {registrationsOpen ? (
+            <>
+              <div style={{
+                background: 'linear-gradient(135deg, #7C3AED, #EC4899)',
+                padding: 'clamp(24px, 5vw, 36px) clamp(20px, 5vw, 48px) clamp(20px, 4vw, 32px)'
+              }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>
+                  Anmälan
+                </p>
+                <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, color: 'white', margin: 0 }}>
+                  Välkommen att anmäla dig!
+                </h2>
+                <p style={{ color: 'rgba(255,255,255,0.8)', marginTop: 8, marginBottom: 0, fontSize: 'clamp(0.9rem, 2.5vw, 1rem)' }}>
+                  Vi återkommer med mer detaljer om tider och platser.
+                </p>
+              </div>
+              <div style={{ padding: 'clamp(20px, 5vw, 40px) clamp(16px, 4vw, 48px)' }}>
+                <RegistrationForm />
+              </div>
+            </>
+          ) : (
+            <div style={{
+              background: 'linear-gradient(135deg, #7C3AED, #EC4899)',
+              padding: 'clamp(40px, 8vw, 64px) clamp(20px, 5vw, 48px)',
+              textAlign: 'center',
+            }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
+                Anmälan
+              </p>
+              <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, color: 'white', margin: '0 0 16px' }}>
+                Anmälan stängd
+              </h2>
+              <p style={{ color: 'rgba(255,255,255,0.85)', marginBottom: 12, fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', margin: '0 0 12px' }}>
+                Anmälningstiden för Cykelfesten har passerat.
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.75)', margin: 0, fontSize: 'clamp(0.85rem, 2vw, 0.95rem)' }}>
+                Kontakta oss på{' '}
+                <a href="mailto:cykelfestolovslund@gmail.com" style={{ color: 'white', fontWeight: 600 }}>
+                  cykelfestolovslund@gmail.com
+                </a>{' '}
+                om du har frågor.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 

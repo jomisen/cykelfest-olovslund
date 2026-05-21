@@ -50,17 +50,26 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
   const [tab, setTab] = useState<Tab>('registrations')
   const [collisions, setCollisions] = useState<Collision[]>([])
   const [generating, setGenerating] = useState(false)
+  const [registrationsOpen, setRegistrationsOpen] = useState(true)
+  const [togglingRegistrations, setTogglingRegistrations] = useState(false)
 
   const fetchRegistrations = useCallback(async () => {
     setIsLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/registrations', { headers: { 'x-admin-pin': pin } })
-      if (!res.ok) throw new Error('Kunde inte hämta anmälningar')
-      const data = await res.json()
+      const [regsRes, settingsRes] = await Promise.all([
+        fetch('/api/registrations', { headers: { 'x-admin-pin': pin } }),
+        fetch('/api/settings'),
+      ])
+      if (!regsRes.ok) throw new Error('Kunde inte hämta anmälningar')
+      const data = await regsRes.json()
       const regs: Registration[] = data.registrations
       setRegistrations(regs)
       setCollisions(detectCollisions(regs))
+      if (settingsRes.ok) {
+        const settings = await settingsRes.json()
+        setRegistrationsOpen(settings.registrations_open)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Något gick fel')
     } finally {
@@ -69,6 +78,26 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
   }, [pin])
 
   useEffect(() => { fetchRegistrations() }, [fetchRegistrations])
+
+  const handleToggleRegistrations = async () => {
+    const newValue = !registrationsOpen
+    const label = newValue ? 'öppna' : 'stänga'
+    if (!confirm(`Vill du ${label} anmälan?`)) return
+    setTogglingRegistrations(true)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
+        body: JSON.stringify({ registrations_open: newValue }),
+      })
+      if (!res.ok) throw new Error()
+      setRegistrationsOpen(newValue)
+    } catch {
+      alert('Kunde inte uppdatera inställningen. Försök igen.')
+    } finally {
+      setTogglingRegistrations(false)
+    }
+  }
 
   const handleUpdate = useCallback(async (id: string, update: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => {
     try {
@@ -164,7 +193,22 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
           <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Admin</p>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#1A1A1A' }}>Cykelfest – Olovslund</h1>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' as const }}>
+          <button
+            onClick={handleToggleRegistrations}
+            disabled={togglingRegistrations}
+            style={{
+              background: registrationsOpen ? '#D1FAE5' : '#FEE2E2',
+              border: `1.5px solid ${registrationsOpen ? '#6EE7B7' : '#FCA5A5'}`,
+              borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14,
+              cursor: togglingRegistrations ? 'not-allowed' : 'pointer',
+              color: registrationsOpen ? '#065F46' : '#991B1B',
+              opacity: togglingRegistrations ? 0.6 : 1,
+            }}
+          >
+            <span style={{ marginRight: 6, fontSize: 10 }}>{registrationsOpen ? '●' : '●'}</span>
+            {registrationsOpen ? 'Anmälan öppen' : 'Anmälan stängd'}
+          </button>
           <button onClick={fetchRegistrations} style={{ background: '#F3F4F6', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>↻ Uppdatera</button>
           <button onClick={() => exportToExcel(registrations)} style={{ background: '#D1FAE5', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#065F46' }}>↓ Excel</button>
           <button onClick={onLogout} style={{ background: 'none', border: 'none', fontSize: 14, color: '#9CA3AF', cursor: 'pointer' }}>Logga ut</button>
