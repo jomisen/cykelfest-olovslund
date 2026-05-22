@@ -52,6 +52,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
   const [generating, setGenerating] = useState(false)
   const [registrationsOpen, setRegistrationsOpen] = useState(true)
   const [togglingRegistrations, setTogglingRegistrations] = useState(false)
+  const [showToggleModal, setShowToggleModal] = useState(false)
 
   const fetchRegistrations = useCallback(async () => {
     setIsLoading(true)
@@ -79,10 +80,13 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
 
   useEffect(() => { fetchRegistrations() }, [fetchRegistrations])
 
-  const handleToggleRegistrations = async () => {
+  const handleToggleRegistrations = () => {
+    setShowToggleModal(true)
+  }
+
+  const handleConfirmToggle = async () => {
     const newValue = !registrationsOpen
-    const label = newValue ? 'öppna' : 'stänga'
-    if (!confirm(`Vill du ${label} anmälan?`)) return
+    setShowToggleModal(false)
     setTogglingRegistrations(true)
     try {
       const res = await fetch('/api/settings', {
@@ -194,21 +198,34 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#1A1A1A' }}>Cykelfest – Olovslund</h1>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' as const }}>
-          <button
-            onClick={handleToggleRegistrations}
-            disabled={togglingRegistrations}
-            style={{
-              background: registrationsOpen ? '#D1FAE5' : '#FEE2E2',
-              border: `1.5px solid ${registrationsOpen ? '#6EE7B7' : '#FCA5A5'}`,
-              borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14,
-              cursor: togglingRegistrations ? 'not-allowed' : 'pointer',
-              color: registrationsOpen ? '#065F46' : '#991B1B',
-              opacity: togglingRegistrations ? 0.6 : 1,
-            }}
-          >
-            <span style={{ marginRight: 6, fontSize: 10 }}>{registrationsOpen ? '●' : '●'}</span>
-            {registrationsOpen ? 'Anmälan öppen' : 'Anmälan stängd'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px' }}>
+            <button
+              role="switch"
+              aria-checked={registrationsOpen}
+              onClick={handleToggleRegistrations}
+              disabled={togglingRegistrations}
+              style={{
+                position: 'relative', width: 44, height: 24, borderRadius: 12,
+                background: registrationsOpen ? '#10B981' : '#D1D5DB',
+                border: 'none', padding: 0, flexShrink: 0,
+                cursor: togglingRegistrations ? 'not-allowed' : 'pointer',
+                opacity: togglingRegistrations ? 0.6 : 1,
+                transition: 'background 0.2s',
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: 3,
+                left: registrationsOpen ? 23 : 3,
+                width: 18, height: 18, borderRadius: '50%',
+                background: 'white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                transition: 'left 0.2s',
+              }} />
+            </button>
+            <span style={{ fontSize: 14, fontWeight: 600, color: registrationsOpen ? '#065F46' : '#6B7280', whiteSpace: 'nowrap' as const }}>
+              {registrationsOpen ? 'Anmälan öppen' : 'Anmälan stängd'}
+            </span>
+          </div>
           <button onClick={fetchRegistrations} style={{ background: '#F3F4F6', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>↻ Uppdatera</button>
           <button onClick={() => exportToExcel(registrations)} style={{ background: '#D1FAE5', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#065F46' }}>↓ Excel</button>
           <button onClick={onLogout} style={{ background: 'none', border: 'none', fontSize: 14, color: '#9CA3AF', cursor: 'pointer' }}>Logga ut</button>
@@ -270,6 +287,59 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
           <ScheduleTab registrations={registrations} collisions={collisions} hasSchedule={hasSchedule} handleUpdate={handleUpdate} />
         )}
       </div>
+
+      {/* Modal – bekräfta toggle */}
+      {showToggleModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 24,
+        }}>
+          <div style={{
+            background: 'white', borderRadius: 20, padding: '32px 28px',
+            maxWidth: 420, width: '100%',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 14, marginBottom: 20,
+              background: registrationsOpen ? '#FEF2F2' : '#F0FDF4',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
+            }}>
+              {registrationsOpen ? '🔒' : '🔓'}
+            </div>
+            <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 800, color: '#1A1A1A' }}>
+              {registrationsOpen ? 'Stäng anmälan?' : 'Öppna anmälan?'}
+            </h2>
+            <p style={{ margin: '0 0 24px', fontSize: 15, color: '#6B7280', lineHeight: 1.6 }}>
+              {registrationsOpen
+                ? 'Formuläret döljs från startsidan och "Anmäl dig nu"-knappen försvinner. Befintliga anmälningar påverkas inte.'
+                : 'Formuläret visas igen på startsidan och besökare kan anmäla sig.'}
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setShowToggleModal(false)}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: 12, border: '1.5px solid #E5E7EB',
+                  background: 'white', fontWeight: 600, fontSize: 15, cursor: 'pointer', color: '#374151',
+                }}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleConfirmToggle}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: 12, border: 'none',
+                  background: registrationsOpen ? '#DC2626' : '#10B981',
+                  fontWeight: 700, fontSize: 15, cursor: 'pointer', color: 'white',
+                }}
+              >
+                {registrationsOpen ? 'Ja, stäng' : 'Ja, öppna'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
