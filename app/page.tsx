@@ -2,6 +2,8 @@ import HeroSection from '@/components/HeroSection'
 import RegistrationForm from '@/components/RegistrationForm'
 import { getDb } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 const muted = 'rgba(240,235,255,0.6)'
 const text = '#f0ebff'
 
