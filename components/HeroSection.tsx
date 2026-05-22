@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
-export default function HeroSection() {
+export default function HeroSection({ registrationsOpen }: { registrationsOpen: boolean }) {
   return (
     <section style={{ position: 'relative', height: '90vh', minHeight: '600px', overflow: 'hidden' }}>
       {/* Hero-bild */}
@@ -86,20 +86,22 @@ export default function HeroSection() {
           En kväll för grannar – middag, cykel och nya bekantskaper.
         </p>
 
-        <Link href="#anmalan" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 10,
-          background: 'linear-gradient(135deg, #7C3AED, #EC4899)',
-          color: 'white', fontWeight: 700,
-          padding: '16px 36px', borderRadius: 16,
-          fontSize: 18, textDecoration: 'none',
-          boxShadow: '0 8px 32px rgba(124,58,237,0.45)',
-          transition: 'transform 0.2s, box-shadow 0.2s'
-        }}>
-          Anmäl dig nu
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-          </svg>
-        </Link>
+        {registrationsOpen && (
+          <Link href="#anmalan" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 10,
+            background: 'linear-gradient(135deg, #7C3AED, #EC4899)',
+            color: 'white', fontWeight: 700,
+            padding: '16px 36px', borderRadius: 16,
+            fontSize: 18, textDecoration: 'none',
+            boxShadow: '0 8px 32px rgba(124,58,237,0.45)',
+            transition: 'transform 0.2s, box-shadow 0.2s'
+          }}>
+            Anmäl dig nu
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+            </svg>
+          </Link>
+        )}
       </div>
     </section>
   )

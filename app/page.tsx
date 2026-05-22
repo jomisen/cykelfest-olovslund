@@ -32,7 +32,7 @@ export default async function Home() {
 
   return (
     <main id="main-content" className="page-bg">
-      <HeroSection />
+      <HeroSection registrationsOpen={registrationsOpen} />
 
       {/* Om cykelfesten */}
       <section style={{ maxWidth: 800, margin: '0 auto', padding: 'clamp(40px, 8vw, 80px) clamp(16px, 4vw, 24px) 0' }}>
