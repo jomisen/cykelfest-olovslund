@@ -206,7 +206,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
               disabled={togglingRegistrations}
               style={{
                 position: 'relative', width: 44, height: 24, borderRadius: 12,
-                background: registrationsOpen ? '#10B981' : '#D1D5DB',
+                background: registrationsOpen ? '#10B981' : '#EF4444',
                 border: 'none', padding: 0, flexShrink: 0,
                 cursor: togglingRegistrations ? 'not-allowed' : 'pointer',
                 opacity: togglingRegistrations ? 0.6 : 1,
@@ -222,7 +222,7 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
                 transition: 'left 0.2s',
               }} />
             </button>
-            <span style={{ fontSize: 14, fontWeight: 600, color: registrationsOpen ? '#065F46' : '#6B7280', whiteSpace: 'nowrap' as const }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: registrationsOpen ? '#065F46' : '#DC2626', whiteSpace: 'nowrap' as const }}>
               {registrationsOpen ? 'Anmälan öppen' : 'Anmälan stängd'}
             </span>
           </div>
