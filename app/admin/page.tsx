@@ -1,28 +1,19 @@
 'use client'
 
-import { useState } from 'react'
 import AdminLogin from '@/components/AdminLogin'
-import AdminDashboard from '@/components/AdminDashboard'
+import FesterListView from '@/components/FesterListView'
+import { useAdminAuth } from '@/components/useAdminAuth'
 
 export default function AdminPage() {
-  const [pin, setPin] = useState<string | null>(null)
+  const { pin, login, logout, checking } = useAdminAuth()
 
-  const handleLogin = async (enteredPin: string): Promise<boolean> => {
-    const res = await fetch('/api/registrations', {
-      headers: { 'x-admin-pin': enteredPin },
-    })
-    if (res.ok) {
-      setPin(enteredPin)
-      return true
-    }
-    return false
+  if (checking) {
+    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>Laddar…</div>
   }
-
-  const handleLogout = () => setPin(null)
 
   if (!pin) {
-    return <AdminLogin onLogin={handleLogin} />
+    return <AdminLogin onLogin={login} />
   }
 
-  return <AdminDashboard pin={pin} onLogout={handleLogout} />
+  return <FesterListView pin={pin} onLogout={logout} />
 }

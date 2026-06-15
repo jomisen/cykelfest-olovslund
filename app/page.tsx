@@ -1,6 +1,8 @@
 import HeroSection from '@/components/HeroSection'
 import RegistrationForm from '@/components/RegistrationForm'
-import { getDb } from '@/lib/db'
+import { ensureSchema, getDb } from '@/lib/db'
+import type { Fest } from '@/lib/types'
+import { formatFestDate } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,17 +11,8 @@ const text = '#f0ebff'
 
 async function getRegistrationsOpen(): Promise<boolean> {
   try {
+    await ensureSchema()
     const sql = getDb()
-    await sql`
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      )
-    `
-    await sql`
-      INSERT INTO settings (key, value) VALUES ('registrations_open', 'true')
-      ON CONFLICT (key) DO NOTHING
-    `
     const rows = await sql`SELECT value FROM settings WHERE key = 'registrations_open'`
     return rows[0]?.value !== 'false'
   } catch {
@@ -27,12 +20,37 @@ async function getRegistrationsOpen(): Promise<boolean> {
   }
 }
 
+async function getCurrentFest(): Promise<Fest | null> {
+  try {
+    await ensureSchema()
+    const sql = getDb()
+    const rows = await sql`
+      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, created_at
+      FROM fester
+      WHERE status = 'aktiv' AND event_date >= CURRENT_DATE
+      ORDER BY event_date ASC
+      LIMIT 1
+    `
+    return (rows[0] as Fest | undefined) ?? null
+  } catch {
+    return null
+  }
+}
+
 export default async function Home() {
-  const registrationsOpen = await getRegistrationsOpen()
+  const [registrationsOpen, fest] = await Promise.all([
+    getRegistrationsOpen(),
+    getCurrentFest(),
+  ])
+
+  const formOpen = registrationsOpen && fest !== null
+  const location = fest?.location ?? 'Olovslund'
+  const contactEmail = fest?.contact_email ?? 'cykelfestolovslund@gmail.com'
+  const dateLabel = fest ? `${formatFestDate(fest.event_date)} · kl ${fest.event_time}` : null
 
   return (
     <main id="main-content" className="page-bg">
-      <HeroSection registrationsOpen={registrationsOpen} />
+      <HeroSection registrationsOpen={formOpen} location={location} dateLabel={dateLabel} />
 
       {/* Om cykelfesten */}
       <section style={{ maxWidth: 800, margin: '0 auto', padding: 'clamp(40px, 8vw, 80px) clamp(16px, 4vw, 24px) 0' }}>
@@ -50,9 +68,11 @@ export default async function Home() {
                 Om evenemanget
               </p>
               <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, margin: 0, color: text }}>
-                Cykelfest i Olovslund
+                Cykelfest i {location}
               </h2>
-              <p style={{ margin: '4px 0 0', fontSize: 15, color: '#a78bfa', fontWeight: 600 }}>12 juni · kl 18.00</p>
+              {dateLabel && (
+                <p style={{ margin: '4px 0 0', fontSize: 15, color: '#a78bfa', fontWeight: 600 }}>{dateLabel}</p>
+              )}
             </div>
           </div>
 
@@ -88,7 +108,7 @@ export default async function Home() {
                 { icon: '👫', text: 'Du kan anmäla dig som par eller ensam – vi sätter ihop grupper' },
                 { icon: '🍽️', text: 'Du ansvarar för en av kvällens rätter' },
                 { icon: '📍', text: 'Exakta tider och adresser skickas ut i förväg' },
-                { icon: '✉️', text: <>Frågor? Hör av dig till <a href="mailto:cykelfestolovslund@gmail.com" style={{ color: '#a78bfa' }}>cykelfestolovslund@gmail.com</a></> },
+                { icon: '✉️', text: <>Frågor? Hör av dig till <a href={`mailto:${contactEmail}`} style={{ color: '#a78bfa' }}>{contactEmail}</a></> },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                   <span style={{
@@ -116,7 +136,7 @@ export default async function Home() {
       {/* Anmälningssektion */}
       <section id="anmalan" style={{ maxWidth: 800, margin: '0 auto', padding: 'clamp(24px, 5vw, 40px) clamp(16px, 4vw, 24px) clamp(60px, 10vw, 100px)' }}>
         <div className="card" style={{ overflow: 'hidden' }}>
-          {registrationsOpen ? (
+          {formOpen ? (
             <>
               <div style={{
                 background: 'linear-gradient(135deg, #7C3AED, #EC4899)',
@@ -133,7 +153,7 @@ export default async function Home() {
                 </p>
               </div>
               <div style={{ padding: 'clamp(20px, 5vw, 40px) clamp(16px, 4vw, 48px)' }}>
-                <RegistrationForm />
+                <RegistrationForm dateLabel={dateLabel!} location={location} />
               </div>
             </>
           ) : (
@@ -146,15 +166,17 @@ export default async function Home() {
                 Anmälan
               </p>
               <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, color: 'white', margin: '0 0 16px' }}>
-                Anmälan stängd
+                {fest ? 'Anmälan stängd' : 'Inga kommande cykelfester planerade'}
               </h2>
               <p style={{ color: 'rgba(255,255,255,0.85)', marginBottom: 12, fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', margin: '0 0 12px' }}>
-                Anmälningstiden för Cykelfesten har passerat.
+                {fest
+                  ? 'Anmälningstiden för Cykelfesten har passerat.'
+                  : 'Det finns ingen aktuell cykelfest att anmäla sig till just nu. Håll utkik här!'}
               </p>
               <p style={{ color: 'rgba(255,255,255,0.75)', margin: 0, fontSize: 'clamp(0.85rem, 2vw, 0.95rem)' }}>
                 Kontakta oss på{' '}
-                <a href="mailto:cykelfestolovslund@gmail.com" style={{ color: 'white', fontWeight: 600 }}>
-                  cykelfestolovslund@gmail.com
+                <a href={`mailto:${contactEmail}`} style={{ color: 'white', fontWeight: 600 }}>
+                  {contactEmail}
                 </a>{' '}
                 om du har frågor.
               </p>

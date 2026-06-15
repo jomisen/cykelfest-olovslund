@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { ensureSchema, getDb } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,8 +10,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    await ensureSchema()
     const sql = getDb()
-    const data = await sql`SELECT * FROM registrations ORDER BY created_at DESC`
+    const festIdParam = request.nextUrl.searchParams.get('fest_id')
+    const festId = festIdParam ? Number(festIdParam) : null
+
+    const data = festId !== null && Number.isInteger(festId)
+      ? await sql`SELECT * FROM registrations WHERE fest_id = ${festId} ORDER BY created_at DESC`
+      : await sql`SELECT * FROM registrations ORDER BY created_at DESC`
+
     return NextResponse.json({ registrations: data })
   } catch (err) {
     console.error('Fetch error:', err)

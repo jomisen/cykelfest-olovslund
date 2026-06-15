@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getDb } from '@/lib/db'
+import { ensureSchema, getDb } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,10 +44,26 @@ export async function POST(request: NextRequest) {
       notes || null,
     ].filter(Boolean).join('\n') || null
 
+    await ensureSchema()
     const sql = getDb()
+
+    const currentFest = await sql`
+      SELECT id FROM fester
+      WHERE status = 'aktiv' AND event_date >= CURRENT_DATE
+      ORDER BY event_date ASC
+      LIMIT 1
+    `
+    if (currentFest.length === 0) {
+      return NextResponse.json(
+        { error: 'Anmälan är stängd just nu. Ingen aktuell cykelfest är planerad.' },
+        { status: 400 }
+      )
+    }
+    const festId = currentFest[0].id
+
     const result = await sql`
-      INSERT INTO registrations (name, email, phone, address, is_pair, partner_name, partner_email, notes)
-      VALUES (${rest.name}, ${rest.email}, ${rest.phone}, ${rest.address}, ${rest.is_pair}, ${rest.partner_name ?? null}, ${rest.partner_email ?? null}, ${combinedNotes})
+      INSERT INTO registrations (name, email, phone, address, is_pair, partner_name, partner_email, notes, fest_id)
+      VALUES (${rest.name}, ${rest.email}, ${rest.phone}, ${rest.address}, ${rest.is_pair}, ${rest.partner_name ?? null}, ${rest.partner_email ?? null}, ${combinedNotes}, ${festId})
       RETURNING id
     `
 

@@ -11,6 +11,25 @@ export function formatDate(dateStr: string): string {
   })
 }
 
+const SV_MONTHS = [
+  'januari', 'februari', 'mars', 'april', 'maj', 'juni',
+  'juli', 'augusti', 'september', 'oktober', 'november', 'december',
+]
+
+export function formatFestDate(dateStr: string): string {
+  const [, m, d] = dateStr.split('-')
+  const month = SV_MONTHS[Number(m) - 1]
+  if (!month) return dateStr
+  return `${Number(d)} ${month}`
+}
+
+export function formatFestDateLong(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-')
+  const month = SV_MONTHS[Number(m) - 1]
+  if (!month) return dateStr
+  return `${Number(d)} ${month} ${y}`
+}
+
 export function courseLabel(course: string | null): string {
   const labels: Record<string, string> = {
     forratt: 'Förrätt',

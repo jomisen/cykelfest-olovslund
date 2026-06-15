@@ -1,16 +1,20 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import type { Registration, Course } from '@/lib/types'
+import Link from 'next/link'
+import type { Registration, Course, Fest } from '@/lib/types'
 import { detectCollisions, type Collision } from '@/lib/schedule'
-import { formatDate, exportToExcel } from '@/lib/utils'
+import { formatDate, formatFestDateLong, exportToExcel } from '@/lib/utils'
+import FestSettingsTab from './FestSettingsTab'
 
 interface Props {
   pin: string
+  fest: Fest
   onLogout: () => void
+  onFestChanged: (fest: Fest) => void
 }
 
-type Tab = 'registrations' | 'planning' | 'schedule'
+type Tab = 'registrations' | 'planning' | 'schedule' | 'settings'
 
 const COURSES: { value: Course; label: string; color: string; bg: string; border: string }[] = [
   { value: 'forratt',  label: 'Förrätt',  color: '#92400E', bg: '#FEF3C7', border: '#FCD34D' },
@@ -43,65 +47,40 @@ function displayName(r: Registration) {
   return r.partner_name ? `${r.name} & ${r.partner_name}` : r.name
 }
 
-export default function AdminDashboard({ pin, onLogout }: Props) {
+export default function AdminDashboard({ pin, fest, onLogout, onFestChanged }: Props) {
   const [registrations, setRegistrations] = useState<Registration[]>([])
+  const [refreshKey, setRefreshKey] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<Tab>('registrations')
   const [collisions, setCollisions] = useState<Collision[]>([])
   const [generating, setGenerating] = useState(false)
-  const [registrationsOpen, setRegistrationsOpen] = useState(true)
-  const [togglingRegistrations, setTogglingRegistrations] = useState(false)
-  const [showToggleModal, setShowToggleModal] = useState(false)
 
-  const fetchRegistrations = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false
     setIsLoading(true)
     setError('')
-    try {
-      const [regsRes, settingsRes] = await Promise.all([
-        fetch('/api/registrations', { headers: { 'x-admin-pin': pin } }),
-        fetch('/api/settings'),
-      ])
-      if (!regsRes.ok) throw new Error('Kunde inte hämta anmälningar')
-      const data = await regsRes.json()
-      const regs: Registration[] = data.registrations
-      setRegistrations(regs)
-      setCollisions(detectCollisions(regs))
-      if (settingsRes.ok) {
-        const settings = await settingsRes.json()
-        setRegistrationsOpen(settings.registrations_open)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Något gick fel')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [pin])
-
-  useEffect(() => { fetchRegistrations() }, [fetchRegistrations])
-
-  const handleToggleRegistrations = () => {
-    setShowToggleModal(true)
-  }
-
-  const handleConfirmToggle = async () => {
-    const newValue = !registrationsOpen
-    setShowToggleModal(false)
-    setTogglingRegistrations(true)
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
-        body: JSON.stringify({ registrations_open: newValue }),
+    fetch(`/api/registrations?fest_id=${fest.id}`, { headers: { 'x-admin-pin': pin } })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('Kunde inte hämta anmälningar')))
+      .then(data => {
+        if (cancelled) return
+        const regs = data.registrations as Registration[]
+        setRegistrations(regs)
+        setCollisions(detectCollisions(regs))
       })
-      if (!res.ok) throw new Error()
-      setRegistrationsOpen(newValue)
-    } catch {
-      alert('Kunde inte uppdatera inställningen. Försök igen.')
-    } finally {
-      setTogglingRegistrations(false)
-    }
-  }
+      .catch(err => {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Något gick fel')
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [pin, fest.id, refreshKey])
+
+  const fetchRegistrations = useCallback(() => {
+    setRefreshKey(k => k + 1)
+  }, [])
 
   const handleUpdate = useCallback(async (id: string, update: Partial<Pick<Registration, 'course' | 'table_forratt' | 'table_varmratt' | 'table_dessert'>>) => {
     try {
@@ -155,11 +134,11 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
       const res = await fetch('/api/generate-schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, fest_id: fest.id }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Fel')
-      await fetchRegistrations()
+      fetchRegistrations()
       if (action === 'generate') setTab('schedule')
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Något gick fel')
@@ -193,39 +172,29 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
   return (
     <div style={s.page}>
       <header style={s.header}>
-        <div>
-          <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Admin</p>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#1A1A1A' }}>Cykelfest – Olovslund</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const, minWidth: 0 }}>
+          <Link
+            href="/admin"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 10, background: '#F3F4F6',
+              fontSize: 14, fontWeight: 600, color: '#374151', textDecoration: 'none',
+              whiteSpace: 'nowrap' as const,
+            }}
+          >
+            ← Fester
+          </Link>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {fest.status === 'arkiverad' ? 'Arkiverad fest' : 'Fest'}
+            </p>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fest.name}</h1>
+            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#6B7280' }}>
+              📅 {formatFestDateLong(fest.event_date)} · kl {fest.event_time} · 📍 {fest.location}
+            </p>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' as const }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px' }}>
-            <button
-              role="switch"
-              aria-checked={registrationsOpen}
-              onClick={handleToggleRegistrations}
-              disabled={togglingRegistrations}
-              style={{
-                position: 'relative', width: 44, height: 24, borderRadius: 12,
-                background: registrationsOpen ? '#10B981' : '#EF4444',
-                border: 'none', padding: 0, flexShrink: 0,
-                cursor: togglingRegistrations ? 'not-allowed' : 'pointer',
-                opacity: togglingRegistrations ? 0.6 : 1,
-                transition: 'background 0.2s',
-              }}
-            >
-              <span style={{
-                position: 'absolute', top: 3,
-                left: registrationsOpen ? 23 : 3,
-                width: 18, height: 18, borderRadius: '50%',
-                background: 'white',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-                transition: 'left 0.2s',
-              }} />
-            </button>
-            <span style={{ fontSize: 14, fontWeight: 600, color: registrationsOpen ? '#065F46' : '#DC2626', whiteSpace: 'nowrap' as const }}>
-              {registrationsOpen ? 'Anmälan öppen' : 'Anmälan stängd'}
-            </span>
-          </div>
           <button onClick={fetchRegistrations} style={{ background: '#F3F4F6', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>↻ Uppdatera</button>
           <button onClick={() => exportToExcel(registrations)} style={{ background: '#D1FAE5', border: 'none', borderRadius: 10, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#065F46' }}>↓ Excel</button>
           <button onClick={onLogout} style={{ background: 'none', border: 'none', fontSize: 14, color: '#9CA3AF', cursor: 'pointer' }}>Logga ut</button>
@@ -250,11 +219,12 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
         </div>
 
         {/* Flikar */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' as const }}>
           {([
             { key: 'registrations', label: 'Anmälningar' },
             { key: 'planning',      label: 'Planering' },
             { key: 'schedule',      label: hasSchedule ? 'Schema ✓' : 'Schema' },
+            { key: 'settings',      label: 'Inställningar' },
           ] as { key: Tab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               style={{ padding: '8px 20px', borderRadius: 10, border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer',
@@ -270,6 +240,8 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
           <div style={{ textAlign: 'center', padding: 80, color: '#9CA3AF' }}>Laddar…</div>
         ) : error ? (
           <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: 14, padding: 24, color: '#991B1B', textAlign: 'center' }}>{error}</div>
+        ) : tab === 'settings' ? (
+          <FestSettingsTab pin={pin} fest={fest} onChanged={onFestChanged} s={s} />
         ) : tab === 'registrations' ? (
           <RegistrationsTab registrations={registrations} handleDelete={handleDelete} s={s} />
         ) : tab === 'planning' ? (
@@ -287,59 +259,6 @@ export default function AdminDashboard({ pin, onLogout }: Props) {
           <ScheduleTab registrations={registrations} collisions={collisions} hasSchedule={hasSchedule} handleUpdate={handleUpdate} />
         )}
       </div>
-
-      {/* Modal – bekräfta toggle */}
-      {showToggleModal && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 1000,
-          background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: 24,
-        }}>
-          <div style={{
-            background: 'white', borderRadius: 20, padding: '32px 28px',
-            maxWidth: 420, width: '100%',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
-          }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 14, marginBottom: 20,
-              background: registrationsOpen ? '#FEF2F2' : '#F0FDF4',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
-            }}>
-              {registrationsOpen ? '🔒' : '🔓'}
-            </div>
-            <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 800, color: '#1A1A1A' }}>
-              {registrationsOpen ? 'Stäng anmälan?' : 'Öppna anmälan?'}
-            </h2>
-            <p style={{ margin: '0 0 24px', fontSize: 15, color: '#6B7280', lineHeight: 1.6 }}>
-              {registrationsOpen
-                ? 'Formuläret döljs från startsidan och "Anmäl dig nu"-knappen försvinner. Befintliga anmälningar påverkas inte.'
-                : 'Formuläret visas igen på startsidan och besökare kan anmäla sig.'}
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => setShowToggleModal(false)}
-                style={{
-                  flex: 1, padding: '12px 0', borderRadius: 12, border: '1.5px solid #E5E7EB',
-                  background: 'white', fontWeight: 600, fontSize: 15, cursor: 'pointer', color: '#374151',
-                }}
-              >
-                Avbryt
-              </button>
-              <button
-                onClick={handleConfirmToggle}
-                style={{
-                  flex: 1, padding: '12px 0', borderRadius: 12, border: 'none',
-                  background: registrationsOpen ? '#DC2626' : '#10B981',
-                  fontWeight: 700, fontSize: 15, cursor: 'pointer', color: 'white',
-                }}
-              >
-                {registrationsOpen ? 'Ja, stäng' : 'Ja, öppna'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

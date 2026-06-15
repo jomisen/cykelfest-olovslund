@@ -14,9 +14,24 @@ export interface Registration {
   table_forratt: number | null
   table_varmratt: number | null
   table_dessert: number | null
+  fest_id: number | null
 }
 
 export type Course = 'forratt' | 'varmratt' | 'dessert'
+
+export type FestStatus = 'aktiv' | 'arkiverad'
+
+export interface Fest {
+  id: number
+  name: string
+  event_date: string
+  event_time: string
+  location: string
+  contact_email: string
+  status: FestStatus
+  created_at: string
+  registration_count?: number
+}
 
 export interface RegistrationFormData {
   name: string

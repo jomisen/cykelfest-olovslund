@@ -14,7 +14,12 @@ interface FormErrors {
   partner_phone?: string
 }
 
-export default function RegistrationForm() {
+interface Props {
+  dateLabel: string
+  location: string
+}
+
+export default function RegistrationForm({ dateLabel, location }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -144,7 +149,7 @@ export default function RegistrationForm() {
 
       {/* Datum */}
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 100, padding: '8px 18px', alignSelf: 'flex-start' }}>
-        <span style={{ fontSize: 14, color: 'rgba(240,235,255,0.9)', fontWeight: 700 }}>📅 12 juni · kl 18.00</span>
+        <span style={{ fontSize: 14, color: 'rgba(240,235,255,0.9)', fontWeight: 700 }}>📅 {dateLabel}</span>
       </div>
 
       {/* Ensam / Par toggle */}
@@ -318,7 +323,7 @@ export default function RegistrationForm() {
       {/* Adress – gemensam */}
       <div style={fieldStyle}>
         <label htmlFor="address" style={labelStyle}>
-          {isPair ? 'Er adress i Olovslund' : 'Din adress i Olovslund'}{' '}
+          {isPair ? `Er adress i ${location}` : `Din adress i ${location}`}{' '}
           <span style={{ color: '#ef4444' }}>*</span>
         </label>
         <input type="text" id="address" value={address}

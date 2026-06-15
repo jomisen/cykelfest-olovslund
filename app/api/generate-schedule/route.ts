@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { ensureSchema, getDb } from '@/lib/db'
 import { generateSchedule, autoAssignHosting } from '@/lib/schedule'
 import type { Registration } from '@/lib/types'
 
@@ -12,18 +12,23 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { action } = body // 'generate' | 'auto-hosting' | 'reset'
+  const { action, fest_id } = body // 'generate' | 'auto-hosting' | 'reset' | 'reset-all'
+
+  if (typeof fest_id !== 'number' || !Number.isInteger(fest_id) || fest_id <= 0) {
+    return NextResponse.json({ error: 'fest_id krävs' }, { status: 400 })
+  }
 
   try {
+    await ensureSchema()
     const sql = getDb()
-    const data = await sql`SELECT * FROM registrations ORDER BY created_at ASC`
+    const data = await sql`SELECT * FROM registrations WHERE fest_id = ${fest_id} ORDER BY created_at ASC`
     const registrations = data as Registration[]
 
     if (action === 'auto-hosting') {
       const assignments = autoAssignHosting(registrations)
       const updates = Array.from(assignments.entries()).map(([id, course]) => ({ id, course }))
       for (const { id, course } of updates) {
-        await sql`UPDATE registrations SET course = ${course} WHERE id = ${id}`
+        await sql`UPDATE registrations SET course = ${course} WHERE id = ${id} AND fest_id = ${fest_id}`
       }
       return NextResponse.json({ success: true, updated: updates.length })
     }
@@ -45,7 +50,7 @@ export async function POST(request: NextRequest) {
           SET table_forratt = ${tables.table_forratt ?? null},
               table_varmratt = ${tables.table_varmratt ?? null},
               table_dessert = ${tables.table_dessert ?? null}
-          WHERE id = ${id}
+          WHERE id = ${id} AND fest_id = ${fest_id}
         `
       }
 
@@ -53,12 +58,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'reset') {
-      await sql`UPDATE registrations SET table_forratt = NULL, table_varmratt = NULL, table_dessert = NULL`
+      await sql`UPDATE registrations SET table_forratt = NULL, table_varmratt = NULL, table_dessert = NULL WHERE fest_id = ${fest_id}`
       return NextResponse.json({ success: true })
     }
 
     if (action === 'reset-all') {
-      await sql`UPDATE registrations SET course = NULL, table_forratt = NULL, table_varmratt = NULL, table_dessert = NULL`
+      await sql`UPDATE registrations SET course = NULL, table_forratt = NULL, table_varmratt = NULL, table_dessert = NULL WHERE fest_id = ${fest_id}`
       return NextResponse.json({ success: true })
     }
 
