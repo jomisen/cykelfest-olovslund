@@ -49,8 +49,7 @@ export async function POST(request: NextRequest) {
 
     const currentFest = await sql`
       SELECT id, registrations_open FROM fester
-      WHERE status = 'aktiv' AND event_date >= CURRENT_DATE
-      ORDER BY event_date ASC
+      WHERE is_current = true
       LIMIT 1
     `
     if (currentFest.length === 0) {

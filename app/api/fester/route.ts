@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const sql = getDb()
     const rows = await sql`
       SELECT
-        f.id, f.name, f.event_date::text AS event_date, f.event_time, f.location, f.contact_email, f.status, f.registrations_open, f.created_at,
+        f.id, f.name, f.event_date::text AS event_date, f.event_time, f.location, f.contact_email, f.status, f.registrations_open, f.is_current, f.created_at,
         (SELECT COUNT(*)::int FROM registrations WHERE fest_id = f.id) AS registration_count
       FROM fester f
       ORDER BY f.event_date DESC, f.created_at DESC
@@ -54,17 +54,16 @@ export async function POST(request: NextRequest) {
     const sql = getDb()
     const newStatus = status ?? 'aktiv'
     const newRegistrationsOpen = newStatus === 'aktiv'
+    const existingCurrent = await sql`SELECT COUNT(*)::int AS count FROM fester WHERE is_current = true`
+    const newIsCurrent = newStatus === 'aktiv' && existingCurrent[0].count === 0
     const inserted = await sql`
-      INSERT INTO fester (name, event_date, event_time, location, contact_email, status, registrations_open)
-      VALUES (${name}, ${event_date}, ${event_time}, ${location}, ${contact_email}, ${newStatus}, ${newRegistrationsOpen})
+      INSERT INTO fester (name, event_date, event_time, location, contact_email, status, registrations_open, is_current)
+      VALUES (${name}, ${event_date}, ${event_time}, ${location}, ${contact_email}, ${newStatus}, ${newRegistrationsOpen}, ${newIsCurrent})
       RETURNING id
     `
     const newId = inserted[0].id
-    if (newRegistrationsOpen) {
-      await sql`UPDATE fester SET registrations_open = false WHERE id != ${newId}`
-    }
     const rows = await sql`
-      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
+      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, is_current, created_at
       FROM fester WHERE id = ${newId}
     `
     return NextResponse.json({ fest: rows[0] }, { status: 201 })

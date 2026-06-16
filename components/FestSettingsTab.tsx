@@ -86,6 +86,26 @@ export default function FestSettingsTab({ pin, fest, onChanged, s }: Props) {
     }
   }
 
+  const toggleIsCurrent = async () => {
+    const newValue = !fest.is_current
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/fester/${fest.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
+        body: JSON.stringify({ is_current: newValue }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Kunde inte ändra')
+      toast.success(newValue ? 'Festen visas nu på anmälningssidan' : 'Festen visas inte längre på anmälningssidan')
+      onChanged(json.fest as Fest)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Något gick fel')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const handleDelete = async () => {
     if (!confirm(`Ta bort festen "${fest.name}"? Detta går inte att ångra.`)) return
     setBusy(true)
@@ -121,14 +141,51 @@ export default function FestSettingsTab({ pin, fest, onChanged, s }: Props) {
       </div>
 
       <div style={{ ...s.card, padding: '20px 24px' }}>
-        <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Anmälan</h3>
+        <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Syns på anmälningssidan</h3>
         <p style={{ margin: '0 0 8px', fontSize: 14, color: '#6B7280' }}>
-          {fest.registrations_open
-            ? 'Anmälan är öppen. Formuläret visas på anmälningssidan när festen är aktuell.'
-            : 'Anmälan är stängd. Formuläret döljs även om festen är aktiv och har ett kommande datum.'}
+          {fest.is_current
+            ? 'Den här festen visas just nu på anmälningssidan.'
+            : 'Festen visas inte på anmälningssidan.'}
         </p>
         <p style={{ margin: '0 0 16px', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>
-          Endast en fest kan ha anmälan öppen åt gången. Om du togglar på här stängs anmälan automatiskt på de andra festerna.
+          Endast en fest kan synas åt gången. Om du togglar på här försvinner den andra festen automatiskt från anmälningssidan.
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            role="switch"
+            aria-checked={fest.is_current}
+            onClick={toggleIsCurrent}
+            disabled={busy}
+            style={{
+              position: 'relative', width: 44, height: 24, borderRadius: 12,
+              background: fest.is_current ? '#7C3AED' : '#9CA3AF',
+              border: 'none', padding: 0, flexShrink: 0,
+              cursor: busy ? 'not-allowed' : 'pointer',
+              opacity: busy ? 0.6 : 1,
+              transition: 'background 0.2s',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 3,
+              left: fest.is_current ? 23 : 3,
+              width: 18, height: 18, borderRadius: '50%',
+              background: 'white',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+              transition: 'left 0.2s',
+            }} />
+          </button>
+          <span style={{ fontSize: 14, fontWeight: 600, color: fest.is_current ? '#5B21B6' : '#6B7280' }}>
+            {fest.is_current ? 'Visas på sidan' : 'Visas inte'}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ ...s.card, padding: '20px 24px' }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Anmälan</h3>
+        <p style={{ margin: '0 0 16px', fontSize: 14, color: '#6B7280' }}>
+          {fest.registrations_open
+            ? 'Anmälningsformuläret är öppet. Visas om festen också syns på sidan.'
+            : 'Anmälningsformuläret är stängt. Sidan visar "Anmälan stängd" om festen syns på sidan.'}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button

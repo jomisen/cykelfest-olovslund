@@ -34,9 +34,26 @@ async function runSchema(sql: NeonQueryFunction<false, false>) {
   `
 
   await sql`
+    ALTER TABLE fester
+      ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT false
+  `
+
+  await sql`
     ALTER TABLE registrations
       ADD COLUMN IF NOT EXISTS fest_id INTEGER REFERENCES fester(id)
   `
+
+  const currentCount = await sql`SELECT COUNT(*)::int AS count FROM fester WHERE is_current = true`
+  if (currentCount[0].count === 0) {
+    const candidate = await sql`
+      SELECT id FROM fester
+      WHERE status = 'aktiv' AND event_date >= CURRENT_DATE
+      ORDER BY event_date ASC LIMIT 1
+    `
+    if (candidate.length > 0) {
+      await sql`UPDATE fester SET is_current = true WHERE id = ${candidate[0].id}`
+    }
+  }
 
   const festCount = await sql`SELECT COUNT(*)::int AS count FROM fester`
   if (festCount[0].count === 0) {

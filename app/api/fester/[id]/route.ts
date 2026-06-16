@@ -12,6 +12,7 @@ const patchSchema = z.object({
   contact_email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/).optional(),
   status: z.enum(['aktiv', 'arkiverad']).optional(),
   registrations_open: z.boolean().optional(),
+  is_current: z.boolean().optional(),
 })
 
 function parseId(raw: string): number | null {
@@ -35,7 +36,7 @@ export async function GET(
     await ensureSchema()
     const sql = getDb()
     const rows = await sql`
-      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
+      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, is_current, created_at
       FROM fester WHERE id = ${id}
     `
     if (rows.length === 0) return NextResponse.json({ error: 'Fest hittades inte' }, { status: 404 })
@@ -80,13 +81,16 @@ export async function PATCH(
     if ('contact_email' in updates) await sql`UPDATE fester SET contact_email = ${updates.contact_email!} WHERE id = ${id}`
     if ('status' in updates) await sql`UPDATE fester SET status = ${updates.status!} WHERE id = ${id}`
     if ('registrations_open' in updates) {
-      if (updates.registrations_open === true) {
-        await sql`UPDATE fester SET registrations_open = false WHERE id != ${id}`
-      }
       await sql`UPDATE fester SET registrations_open = ${updates.registrations_open!} WHERE id = ${id}`
     }
+    if ('is_current' in updates) {
+      if (updates.is_current === true) {
+        await sql`UPDATE fester SET is_current = false WHERE id != ${id}`
+      }
+      await sql`UPDATE fester SET is_current = ${updates.is_current!} WHERE id = ${id}`
+    }
     const rows = await sql`
-      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
+      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, is_current, created_at
       FROM fester WHERE id = ${id}
     `
     return NextResponse.json({ fest: rows[0] })

@@ -35,6 +35,17 @@ function RegistrationsBadge({ open }: { open: boolean }) {
   )
 }
 
+function CurrentBadge() {
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+      background: '#EDE9FE',
+      color: '#5B21B6',
+      textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+    }}>★ Syns på sidan</span>
+  )
+}
+
 export default function FesterListView({ pin, onLogout }: Props) {
   const [fester, setFester] = useState<Fest[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -190,6 +201,7 @@ function FesterSection({ title, fester, s }: { title: string; fester: Fest[]; s:
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const, marginBottom: 6 }}>
                   <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1A1A1A' }}>{f.name}</h3>
                   <StatusBadge status={f.status} />
+                  {f.is_current && <CurrentBadge />}
                   {f.status === 'aktiv' && <RegistrationsBadge open={f.registrations_open} />}
                 </div>
                 <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>

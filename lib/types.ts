@@ -30,6 +30,7 @@ export interface Fest {
   contact_email: string
   status: FestStatus
   registrations_open: boolean
+  is_current: boolean
   created_at: string
   registration_count?: number
 }
