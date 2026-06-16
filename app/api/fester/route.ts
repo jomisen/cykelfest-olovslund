@@ -52,12 +52,22 @@ export async function POST(request: NextRequest) {
     const { name, event_date, event_time, location, contact_email, status } = parsed.data
     await ensureSchema()
     const sql = getDb()
-    const result = await sql`
-      INSERT INTO fester (name, event_date, event_time, location, contact_email, status)
-      VALUES (${name}, ${event_date}, ${event_time}, ${location}, ${contact_email}, ${status ?? 'aktiv'})
-      RETURNING id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
+    const newStatus = status ?? 'aktiv'
+    const newRegistrationsOpen = newStatus === 'aktiv'
+    const inserted = await sql`
+      INSERT INTO fester (name, event_date, event_time, location, contact_email, status, registrations_open)
+      VALUES (${name}, ${event_date}, ${event_time}, ${location}, ${contact_email}, ${newStatus}, ${newRegistrationsOpen})
+      RETURNING id
     `
-    return NextResponse.json({ fest: result[0] }, { status: 201 })
+    const newId = inserted[0].id
+    if (newRegistrationsOpen) {
+      await sql`UPDATE fester SET registrations_open = false WHERE id != ${newId}`
+    }
+    const rows = await sql`
+      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
+      FROM fester WHERE id = ${newId}
+    `
+    return NextResponse.json({ fest: rows[0] }, { status: 201 })
   } catch (err) {
     console.error('Fester create error:', err)
     return NextResponse.json({ error: 'Kunde inte skapa fest' }, { status: 500 })

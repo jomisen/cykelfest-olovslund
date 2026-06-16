@@ -122,10 +122,13 @@ export default function FestSettingsTab({ pin, fest, onChanged, s }: Props) {
 
       <div style={{ ...s.card, padding: '20px 24px' }}>
         <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Anmälan</h3>
-        <p style={{ margin: '0 0 16px', fontSize: 14, color: '#6B7280' }}>
+        <p style={{ margin: '0 0 8px', fontSize: 14, color: '#6B7280' }}>
           {fest.registrations_open
             ? 'Anmälan är öppen. Formuläret visas på anmälningssidan när festen är aktuell.'
             : 'Anmälan är stängd. Formuläret döljs även om festen är aktiv och har ett kommande datum.'}
+        </p>
+        <p style={{ margin: '0 0 16px', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>
+          Endast en fest kan ha anmälan öppen åt gången. Om du togglar på här stängs anmälan automatiskt på de andra festerna.
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
