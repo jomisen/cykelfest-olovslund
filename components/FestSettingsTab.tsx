@@ -180,25 +180,27 @@ export default function FestSettingsTab({ pin, fest, onChanged, s }: Props) {
         </div>
       </div>
 
-      <div style={{ ...s.card, padding: '20px 24px' }}>
+      <div style={{ ...s.card, padding: '20px 24px', opacity: fest.is_current ? 1 : 0.6 }}>
         <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Anmälan</h3>
-        <p style={{ margin: '0 0 16px', fontSize: 14, color: '#6B7280' }}>
-          {fest.registrations_open
-            ? 'Anmälningsformuläret är öppet. Visas om festen också syns på sidan.'
-            : 'Anmälningsformuläret är stängt. Sidan visar "Anmälan stängd" om festen syns på sidan.'}
+        <p style={{ margin: '0 0 8px', fontSize: 14, color: '#6B7280' }}>
+          {fest.is_current
+            ? (fest.registrations_open
+                ? 'Anmälningsformuläret är öppet.'
+                : 'Anmälningsformuläret är stängt. Sidan visar "Anmälan stängd".')
+            : 'Anmälan kan bara öppnas på festen som syns på sidan. Markera festen som synlig först.'}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             role="switch"
             aria-checked={fest.registrations_open}
             onClick={toggleRegistrationsOpen}
-            disabled={busy}
+            disabled={busy || !fest.is_current}
             style={{
               position: 'relative', width: 44, height: 24, borderRadius: 12,
               background: fest.registrations_open ? '#10B981' : '#EF4444',
               border: 'none', padding: 0, flexShrink: 0,
-              cursor: busy ? 'not-allowed' : 'pointer',
-              opacity: busy ? 0.6 : 1,
+              cursor: (busy || !fest.is_current) ? 'not-allowed' : 'pointer',
+              opacity: (busy || !fest.is_current) ? 0.6 : 1,
               transition: 'background 0.2s',
             }}
           >

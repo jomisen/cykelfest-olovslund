@@ -74,20 +74,43 @@ export async function PATCH(
     }
     await ensureSchema()
     const sql = getDb()
+
+    // Validera: registrations_open=true kräver att festen är (eller blir) is_current.
+    if (updates.registrations_open === true) {
+      const existing = await sql`SELECT is_current FROM fester WHERE id = ${id}`
+      if (existing.length === 0) {
+        return NextResponse.json({ error: 'Fest hittades inte' }, { status: 404 })
+      }
+      const finalIsCurrent = 'is_current' in updates ? updates.is_current : existing[0].is_current
+      if (!finalIsCurrent) {
+        return NextResponse.json(
+          { error: 'Anmälan kan bara öppnas på festen som syns på sidan. Markera festen som synlig först.' },
+          { status: 409 }
+        )
+      }
+    }
+
     if ('name' in updates) await sql`UPDATE fester SET name = ${updates.name!} WHERE id = ${id}`
     if ('event_date' in updates) await sql`UPDATE fester SET event_date = ${updates.event_date!} WHERE id = ${id}`
     if ('event_time' in updates) await sql`UPDATE fester SET event_time = ${updates.event_time!} WHERE id = ${id}`
     if ('location' in updates) await sql`UPDATE fester SET location = ${updates.location!} WHERE id = ${id}`
     if ('contact_email' in updates) await sql`UPDATE fester SET contact_email = ${updates.contact_email!} WHERE id = ${id}`
     if ('status' in updates) await sql`UPDATE fester SET status = ${updates.status!} WHERE id = ${id}`
-    if ('registrations_open' in updates) {
-      await sql`UPDATE fester SET registrations_open = ${updates.registrations_open!} WHERE id = ${id}`
-    }
+
+    // is_current ändras före registrations_open så att registrations_open-uppdateringen sker mot rätt visibility-state.
     if ('is_current' in updates) {
       if (updates.is_current === true) {
-        await sql`UPDATE fester SET is_current = false WHERE id != ${id}`
+        // Den här festen blir synlig — alla andra tappar både visibility och anmälan
+        await sql`UPDATE fester SET is_current = false, registrations_open = false WHERE id != ${id}`
+        await sql`UPDATE fester SET is_current = true WHERE id = ${id}`
+      } else {
+        // Den här festen döljs — anmälan stängs samtidigt eftersom den nu vore meningslös
+        await sql`UPDATE fester SET is_current = false, registrations_open = false WHERE id = ${id}`
       }
-      await sql`UPDATE fester SET is_current = ${updates.is_current!} WHERE id = ${id}`
+    }
+
+    if ('registrations_open' in updates) {
+      await sql`UPDATE fester SET registrations_open = ${updates.registrations_open!} WHERE id = ${id}`
     }
     const rows = await sql`
       SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, is_current, created_at

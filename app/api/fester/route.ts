@@ -53,9 +53,10 @@ export async function POST(request: NextRequest) {
     await ensureSchema()
     const sql = getDb()
     const newStatus = status ?? 'aktiv'
-    const newRegistrationsOpen = newStatus === 'aktiv'
     const existingCurrent = await sql`SELECT COUNT(*)::int AS count FROM fester WHERE is_current = true`
     const newIsCurrent = newStatus === 'aktiv' && existingCurrent[0].count === 0
+    // Endast den synliga festen kan ha anmälan öppen
+    const newRegistrationsOpen = newIsCurrent
     const inserted = await sql`
       INSERT INTO fester (name, event_date, event_time, location, contact_email, status, registrations_open, is_current)
       VALUES (${name}, ${event_date}, ${event_time}, ${location}, ${contact_email}, ${newStatus}, ${newRegistrationsOpen}, ${newIsCurrent})

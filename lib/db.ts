@@ -55,6 +55,9 @@ async function runSchema(sql: NeonQueryFunction<false, false>) {
     }
   }
 
+  // Invariant: endast festen som syns på sidan kan ha anmälan öppen
+  await sql`UPDATE fester SET registrations_open = false WHERE is_current = false AND registrations_open = true`
+
   const festCount = await sql`SELECT COUNT(*)::int AS count FROM fester`
   if (festCount[0].count === 0) {
     const regCount = await sql`SELECT COUNT(*)::int AS count FROM registrations`
