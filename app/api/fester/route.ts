@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const sql = getDb()
     const rows = await sql`
       SELECT
-        f.id, f.name, f.event_date::text AS event_date, f.event_time, f.location, f.contact_email, f.status, f.created_at,
+        f.id, f.name, f.event_date::text AS event_date, f.event_time, f.location, f.contact_email, f.status, f.registrations_open, f.created_at,
         (SELECT COUNT(*)::int FROM registrations WHERE fest_id = f.id) AS registration_count
       FROM fester f
       ORDER BY f.event_date DESC, f.created_at DESC
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const result = await sql`
       INSERT INTO fester (name, event_date, event_time, location, contact_email, status)
       VALUES (${name}, ${event_date}, ${event_time}, ${location}, ${contact_email}, ${status ?? 'aktiv'})
-      RETURNING id, name, event_date::text AS event_date, event_time, location, contact_email, status, created_at
+      RETURNING id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
     `
     return NextResponse.json({ fest: result[0] }, { status: 201 })
   } catch (err) {

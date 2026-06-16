@@ -66,6 +66,26 @@ export default function FestSettingsTab({ pin, fest, onChanged, s }: Props) {
     }
   }
 
+  const toggleRegistrationsOpen = async () => {
+    const newValue = !fest.registrations_open
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/fester/${fest.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
+        body: JSON.stringify({ registrations_open: newValue }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Kunde inte ändra')
+      toast.success(newValue ? 'Anmälan öppen' : 'Anmälan stängd')
+      onChanged(json.fest as Fest)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Något gick fel')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const handleDelete = async () => {
     if (!confirm(`Ta bort festen "${fest.name}"? Detta går inte att ångra.`)) return
     setBusy(true)
@@ -97,6 +117,43 @@ export default function FestSettingsTab({ pin, fest, onChanged, s }: Props) {
           >
             {busy ? 'Sparar…' : 'Spara'}
           </button>
+        </div>
+      </div>
+
+      <div style={{ ...s.card, padding: '20px 24px' }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>Anmälan</h3>
+        <p style={{ margin: '0 0 16px', fontSize: 14, color: '#6B7280' }}>
+          {fest.registrations_open
+            ? 'Anmälan är öppen. Formuläret visas på anmälningssidan när festen är aktuell.'
+            : 'Anmälan är stängd. Formuläret döljs även om festen är aktiv och har ett kommande datum.'}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            role="switch"
+            aria-checked={fest.registrations_open}
+            onClick={toggleRegistrationsOpen}
+            disabled={busy}
+            style={{
+              position: 'relative', width: 44, height: 24, borderRadius: 12,
+              background: fest.registrations_open ? '#10B981' : '#EF4444',
+              border: 'none', padding: 0, flexShrink: 0,
+              cursor: busy ? 'not-allowed' : 'pointer',
+              opacity: busy ? 0.6 : 1,
+              transition: 'background 0.2s',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 3,
+              left: fest.registrations_open ? 23 : 3,
+              width: 18, height: 18, borderRadius: '50%',
+              background: 'white',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+              transition: 'left 0.2s',
+            }} />
+          </button>
+          <span style={{ fontSize: 14, fontWeight: 600, color: fest.registrations_open ? '#065F46' : '#DC2626' }}>
+            {fest.registrations_open ? 'Anmälan öppen' : 'Anmälan stängd'}
+          </span>
         </div>
       </div>
 

@@ -11,6 +11,7 @@ const patchSchema = z.object({
   location: z.string().min(1).optional(),
   contact_email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/).optional(),
   status: z.enum(['aktiv', 'arkiverad']).optional(),
+  registrations_open: z.boolean().optional(),
 })
 
 function parseId(raw: string): number | null {
@@ -34,7 +35,7 @@ export async function GET(
     await ensureSchema()
     const sql = getDb()
     const rows = await sql`
-      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, created_at
+      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
       FROM fester WHERE id = ${id}
     `
     if (rows.length === 0) return NextResponse.json({ error: 'Fest hittades inte' }, { status: 404 })
@@ -78,8 +79,9 @@ export async function PATCH(
     if ('location' in updates) await sql`UPDATE fester SET location = ${updates.location!} WHERE id = ${id}`
     if ('contact_email' in updates) await sql`UPDATE fester SET contact_email = ${updates.contact_email!} WHERE id = ${id}`
     if ('status' in updates) await sql`UPDATE fester SET status = ${updates.status!} WHERE id = ${id}`
+    if ('registrations_open' in updates) await sql`UPDATE fester SET registrations_open = ${updates.registrations_open!} WHERE id = ${id}`
     const rows = await sql`
-      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, created_at
+      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
       FROM fester WHERE id = ${id}
     `
     return NextResponse.json({ fest: rows[0] })

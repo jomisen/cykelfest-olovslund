@@ -29,6 +29,11 @@ async function runSchema(sql: NeonQueryFunction<false, false>) {
   `
 
   await sql`
+    ALTER TABLE fester
+      ADD COLUMN IF NOT EXISTS registrations_open BOOLEAN NOT NULL DEFAULT true
+  `
+
+  await sql`
     ALTER TABLE registrations
       ADD COLUMN IF NOT EXISTS fest_id INTEGER REFERENCES fester(id)
   `

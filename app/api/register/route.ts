@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const sql = getDb()
 
     const currentFest = await sql`
-      SELECT id FROM fester
+      SELECT id, registrations_open FROM fester
       WHERE status = 'aktiv' AND event_date >= CURRENT_DATE
       ORDER BY event_date ASC
       LIMIT 1
@@ -56,6 +56,12 @@ export async function POST(request: NextRequest) {
     if (currentFest.length === 0) {
       return NextResponse.json(
         { error: 'Anmälan är stängd just nu. Ingen aktuell cykelfest är planerad.' },
+        { status: 400 }
+      )
+    }
+    if (!currentFest[0].registrations_open) {
+      return NextResponse.json(
+        { error: 'Anmälan är stängd just nu.' },
         { status: 400 }
       )
     }

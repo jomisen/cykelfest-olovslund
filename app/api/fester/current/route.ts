@@ -8,7 +8,7 @@ export async function GET() {
     await ensureSchema()
     const sql = getDb()
     const rows = await sql`
-      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, created_at
+      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
       FROM fester
       WHERE status = 'aktiv' AND event_date >= CURRENT_DATE
       ORDER BY event_date ASC

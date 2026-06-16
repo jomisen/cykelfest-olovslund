@@ -29,6 +29,7 @@ export interface Fest {
   location: string
   contact_email: string
   status: FestStatus
+  registrations_open: boolean
   created_at: string
   registration_count?: number
 }

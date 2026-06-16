@@ -9,23 +9,12 @@ export const dynamic = 'force-dynamic'
 const muted = 'rgba(240,235,255,0.6)'
 const text = '#f0ebff'
 
-async function getRegistrationsOpen(): Promise<boolean> {
-  try {
-    await ensureSchema()
-    const sql = getDb()
-    const rows = await sql`SELECT value FROM settings WHERE key = 'registrations_open'`
-    return rows[0]?.value !== 'false'
-  } catch {
-    return true
-  }
-}
-
 async function getCurrentFest(): Promise<Fest | null> {
   try {
     await ensureSchema()
     const sql = getDb()
     const rows = await sql`
-      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, created_at
+      SELECT id, name, event_date::text AS event_date, event_time, location, contact_email, status, registrations_open, created_at
       FROM fester
       WHERE status = 'aktiv' AND event_date >= CURRENT_DATE
       ORDER BY event_date ASC
@@ -38,12 +27,9 @@ async function getCurrentFest(): Promise<Fest | null> {
 }
 
 export default async function Home() {
-  const [registrationsOpen, fest] = await Promise.all([
-    getRegistrationsOpen(),
-    getCurrentFest(),
-  ])
+  const fest = await getCurrentFest()
 
-  const formOpen = registrationsOpen && fest !== null
+  const formOpen = fest !== null && fest.registrations_open
   const location = fest?.location ?? 'Olovslund'
   const contactEmail = fest?.contact_email ?? 'cykelfestolovslund@gmail.com'
   const dateLabel = fest ? `${formatFestDate(fest.event_date)} · kl ${fest.event_time}` : null
